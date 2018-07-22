@@ -1945,7 +1945,12 @@ void beam_start_warmdown(beam *b)
 	if(b->beam_sound_loop != -1){
 		snd_stop(b->beam_sound_loop);
 		b->beam_sound_loop = -1;
-	}						
+	}
+
+	if (b->subsys != nullptr) {
+		// Starts the warmdown program if it exists
+		b->subsys->system_info->beam_warmdown_program.start(b->objp, b->subsys);
+	}
 }
 
 // recalculate beam sounds (looping sounds relative to the player)

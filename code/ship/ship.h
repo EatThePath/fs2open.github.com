@@ -1427,6 +1427,7 @@ extern void physics_ship_init(object *objp);
 //	Return true/false for subsystem found/not found.
 //	Stuff vector *pos with absolute position.
 extern int get_subsystem_pos(vec3d *pos, object *objp, ship_subsys *subsysp);
+extern int get_local_subsystem_pos(vec3d *pos, object *objp, ship_subsys *subsysp);
 
 extern int ship_info_lookup(const char *name = NULL);
 extern int ship_name_lookup(const char *name, int inc_players = 0);	// returns the index into Ship array of name

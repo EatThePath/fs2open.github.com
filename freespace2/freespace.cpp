@@ -27,6 +27,10 @@
  #include <sys/stat.h>
 #endif
 
+#include "freespace.h"
+#include "freespaceresource.h"
+#include "levelpaging.h"
+#include "actions/ProgramManager.h"
 #include "anim/animplay.h"
 #include "asteroid/asteroid.h"
 #include "autopilot/autopilot.h"
@@ -35,15 +39,13 @@
 #include "cmdline/cmdline.h"
 #include "cmeasure/cmeasure.h"
 #include "cutscene/cutscenes.h"
-#include "cutscene/player.h"
 #include "cutscene/movie.h"
+#include "cutscene/player.h"
 #include "debris/debris.h"
 #include "debugconsole/console.h"
+#include "decals/decals.h"
 #include "exceptionhandler/exceptionhandler.h"
 #include "fireball/fireballs.h"
-#include "freespace.h"
-#include "freespaceresource.h"
-#include "levelpaging.h"
 #include "fs2netd/fs2netd_client.h"
 #include "gamehelp/contexthelp.h"
 #include "gamehelp/gameplayhelp.h"
@@ -54,9 +56,9 @@
 #include "globalincs/mspdb_callstack.h"
 #include "globalincs/version.h"
 #include "graphics/font.h"
-#include "graphics/shadows.h"
-#include "graphics/matrix.h"
 #include "graphics/light.h"
+#include "graphics/matrix.h"
+#include "graphics/shadows.h"
 #include "headtracking/headtracking.h"
 #include "hud/hud.h"
 #include "hud/hudconfig.h"
@@ -68,16 +70,16 @@
 #include "hud/hudsquadmsg.h"
 #include "hud/hudtargetbox.h"
 #include "iff_defs/iff_defs.h"
+#include "io/cursor.h"
 #include "io/joy.h"
 #include "io/joy_ff.h"
 #include "io/key.h"
 #include "io/mouse.h"
-#include "io/cursor.h"
 #include "io/timer.h"
 #include "jumpnode/jumpnode.h"
-#include "libs/ffmpeg/FFmpeg.h"
 #include "lab/lab.h"
-#include "lab/wmcgui.h"	//So that GUI_System can be initialized
+#include "lab/wmcgui.h" //So that GUI_System can be initialized
+#include "libs/ffmpeg/FFmpeg.h"
 #include "lighting/lighting.h"
 #include "localization/localize.h"
 #include "math/staticrand.h"
@@ -136,11 +138,10 @@
 #include "parse/encrypt.h"
 #include "parse/generic_log.h"
 #include "parse/parselo.h"
-#include "scripting/scripting.h"
 #include "parse/sexp.h"
 #include "parse/sexp/sexp_lookup.h"
-#include "particle/particle.h"
 #include "particle/ParticleManager.h"
+#include "particle/particle.h"
 #include "pilotfile/pilotfile.h"
 #include "playerman/managepilot.h"
 #include "playerman/player.h"
@@ -150,6 +151,7 @@
 #include "radar/radarsetup.h"
 #include "render/3d.h"
 #include "render/batching.h"
+#include "scripting/scripting.h"
 #include "ship/afterburner.h"
 #include "ship/awacs.h"
 #include "ship/ship.h"
@@ -165,15 +167,14 @@
 #include "starfield/supernova.h"
 #include "stats/medals.h"
 #include "stats/stats.h"
+#include "tracing/Monitor.h"
 #include "tracing/tracing.h"
 #include "weapon/beam.h"
-#include "decals/decals.h"
 #include "weapon/emp.h"
 #include "weapon/flak.h"
 #include "weapon/muzzleflash.h"
 #include "weapon/shockwave.h"
 #include "weapon/weapon.h"
-#include "tracing/Monitor.h"
 
 #include "SDLGraphicsOperations.h"
 
@@ -3805,6 +3806,9 @@ void game_simulation_frame()
 		}
 #endif
 	}
+
+	// Run the programs on every simulation step
+	actions::ProgramManager::instance()->stepInstances();
 
 	Script_system.RunCondition(CHA_SIMULATION);
 }

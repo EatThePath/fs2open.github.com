@@ -12,13 +12,14 @@
 #ifndef _MODEL_H
 #define _MODEL_H
 
-#include "globalincs/globals.h"	// for NAME_LENGTH
+#include "actions/Program.h"
+#include "gamesnd/gamesnd.h"
+#include "globalincs/globals.h" // for NAME_LENGTH
 #include "globalincs/pstypes.h"
 #include "graphics/2d.h"
-#include "gamesnd/gamesnd.h"
+#include "model/model_flags.h"
 #include "object/object.h"
 #include "ship/ship_flags.h"
-#include "model/model_flags.h"
 
 class object;
 class model_render_params;
@@ -191,13 +192,13 @@ public:
 
 	//Per-turret ownage settings - SUSHI
 	int turret_max_bomb_ownage; 
-	int turret_max_target_ownage; 
+	int turret_max_target_ownage;
+
+	actions::ProgramSet beam_warmdown_program;
 
     void reset();
 
-    model_subsystem() {
-        reset();
-    }
+    model_subsystem();
 };
 
 typedef struct model_special {

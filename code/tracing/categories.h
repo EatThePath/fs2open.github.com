@@ -147,6 +147,9 @@ extern Category RenderSingleDecal;
 extern Category GpuHeapAllocate;
 extern Category GpuHeapDeallocate;
 
+extern Category ProgramsStepAll;
+extern Category ProgramStepOne;
+
 }
 
 #endif // _TRACING_CATEGORIES_H

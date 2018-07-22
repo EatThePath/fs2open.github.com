@@ -40,7 +40,7 @@ public:
 	friend bool operator==(ID a, ID b) { return a.m_val == b.m_val; }
 	friend bool operator!=(ID a, ID b) { return a.m_val != b.m_val; }
 
-	inline bool isValid() { return m_val != default_value; }
+	inline bool isValid() const { return m_val != default_value; }
 
 private:
 	Impl m_val;
