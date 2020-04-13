@@ -2229,6 +2229,11 @@ int parse_weapon(int subtype, bool replace, const char *filename)
 			}
 		}
 
+		// angle off turret normal
+		if (optional_string("+FixedSlashAngle:")) {
+			stuff_float(&wip->b_info.beam_fixed_slash_angle);
+		}
+
 		// beam fire sound
 		parse_game_sound("+BeamSound:", &wip->b_info.beam_loop_sound);
 
@@ -7928,6 +7933,7 @@ void weapon_info::reset()
 	this->b_info.beam_particle_count = -1;
 	this->b_info.beam_particle_radius = 0.0f;
 	this->b_info.beam_particle_angle = 0.0f;
+	this->b_info.beam_fixed_slash_angle = -1.0f;
 	this->b_info.beam_loop_sound = gamesnd_id();
 	this->b_info.beam_warmup_sound = gamesnd_id();
 	this->b_info.beam_warmdown_sound = gamesnd_id();
