@@ -1898,6 +1898,9 @@ int beam_start_firing(beam *b)
 	case BEAM_TYPE_E:
 		break;
 
+	case BEAM_TYPE_F:
+		break;
+
 	default:
 		Int3();
 	}
@@ -3378,6 +3381,7 @@ float beam_get_cone_dot(beam *b)
 		return cosf(fl_radians(50.5f));
 		
 	case BEAM_TYPE_B:
+	case BEAM_TYPE_F:
 		return vm_vec_dot(&b->binfo.dir_a, &b->binfo.dir_b);
 
 	default:
