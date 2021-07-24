@@ -4508,20 +4508,61 @@ int game_poll()
 
 				// we could probably go with .3 here for 1,000 shots but people really need to clean out
 				// their directories better than that so it's 100 for now.
-				sprintf( tmp_name, NOX("screen%.4i"), counter );
-				counter++;
+				sprintf( tmp_name, NOX("screen%.6i"), counter );
+		
+				mprintf(( "Dumping screen to '%s'\n", tmp_name ));
+				sprintf( tmp_name, NOX("screen%.6ia"), counter );
+				gr_print_screen(tmp_name);
+				
+				camid cid;
+				float dir_hold = static_light_factor;
+				static_light_factor = 0.01f;
+				cid = game_render_frame_setup();
+				gr_clear();
+				game_render_frame( cid );
+				gr_flip();
+				sprintf(tmp_name, NOX("screen%.6ib"), counter );
+				gr_print_screen(tmp_name);
+				
+				static_light_factor = 0.1f;
+				cid = game_render_frame_setup();
+				gr_clear();
+				game_render_frame( cid );
+				gr_flip();
+				sprintf( tmp_name, NOX("screen%.6ic"), counter );
+				gr_print_screen(tmp_name);
+				static_light_factor=dir_hold;
 
-				// we've got two character precision so we can only have 100 shots at a time, reset if needed
-				//Now we have four digit precision :) -WMC
-				if (counter > 9999)
+				static_light_factor = 1.0f;
+				cid = game_render_frame_setup();
+				gr_clear();
+				game_render_frame( cid );
+				gr_flip();
+				sprintf( tmp_name, NOX("screen%.6ic"), counter );
+				gr_print_screen(tmp_name);
+				static_light_factor=dir_hold;
+				
+				static_light_factor = 10.0f;
+				cid = game_render_frame_setup();
+				gr_clear();
+				game_render_frame( cid );
+				gr_flip();
+				sprintf( tmp_name, NOX("screen%.6id"), counter );
+				gr_print_screen(tmp_name);
+				static_light_factor=dir_hold;
+
+				cid = game_render_frame_setup();
+				gr_clear();
+				game_render_frame( cid );
+				gr_flip();
+
+				counter++;
+				if (counter > 999999)
 				{
 					//This should pop up a dialogue or something ingame.
-					Warning(LOCATION, "Screenshot count has reached max of 9999. Resetting to 0.");
+					Warning(LOCATION, "Screenshot count has reached max of 999999. Resetting to 0.");
 					counter = 0;
 				}
-
-				mprintf(( "Dumping screen to '%s'\n", tmp_name ));
-				gr_print_screen(tmp_name);
 
 				game_start_time();
 				os_config_write_uint(nullptr, "ScreenshotNum", counter);
