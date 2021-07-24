@@ -4368,6 +4368,25 @@ int game_check_key()
 	return k;
 }
 
+void screenshot_premute(const char* name_base,const char* name_suffix, int mapper)
+{	
+	int original_tone = tonemapper_selection;
+	SCP_string filename = SCP_string(name_base);
+	filename.append(name_suffix);
+	tonemapper_selection = mapper;	
+	 
+	gr_clear();
+	light_reset();
+	gr_reset_clip();
+	camid cid = game_render_frame_setup();
+	clip_frame_view();
+	game_render_frame( cid );
+	gr_flip();
+	//sprintf(tmp_name, NOX("screen%.6ib"), counter );
+	gr_print_screen(filename.c_str());
+	tonemapper_selection = original_tone;
+
+}
 // same as game_check_key(), except this is used while actually in the game.  Since there
 // generally are differences between game control keys and general UI keys, makes sense to
 // have seperate functions for each case.  If you are not checking a game control while in a
@@ -4521,37 +4540,12 @@ int game_poll()
 				sprintf( tmp_name, NOX("screen%.6i"), counter );
 		
 				mprintf(( "Dumping screen to '%s'\n", tmp_name ));
-				sprintf( tmp_name, NOX("screen%.6ia"), counter );
+				sprintf( tmp_name, NOX("screen%.6i"), counter );
 				gr_print_screen(tmp_name);
-				
-				camid cid;
-				float dir_hold = static_light_factor;
-				gr_clear();
-				tonemapper_selection = 1;
-				light_reset();
-				gr_reset_clip();
-				cid = game_render_frame_setup();
-				clip_frame_view();
-				game_render_frame( cid );
-				gr_flip();
-				sprintf(tmp_name, NOX("screen%.6ib"), counter );
-				gr_print_screen(tmp_name);
-				
-				
-				gr_clear();
-				tonemapper_selection = 2;
-				light_reset();
-				gr_reset_clip();
-				cid = game_render_frame_setup();
-				clip_frame_view();
-				game_render_frame( cid );
-				gr_flip();
-				sprintf( tmp_name, NOX("screen%.6ic"), counter );
-				gr_print_screen(tmp_name);
-				static_light_factor=dir_hold;
 
-				tonemapper_selection = 1;
-
+				screenshot_premute(tmp_name, "uc", 1);
+				screenshot_premute(tmp_name, "ac", 2);
+				
 				counter++;
 				if (counter > 999999)
 				{
