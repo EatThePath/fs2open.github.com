@@ -24,7 +24,7 @@
 
 extern bool PostProcessing_override;
 extern int opengl_check_framebuffer();
-
+extern int tonemapper_selection;
 // Needed to track where the FXAA shaders are
 // In case we don't find the shaders at all, this override is needed
 bool fxaa_unavailable = false;
@@ -68,7 +68,8 @@ void opengl_post_pass_tonemap()
 	Current_shader->program->Uniforms.setTextureUniform("tex", 0);
 
 	opengl_set_generic_uniform_data<graphics::generic_data::tonemapping_data>(
-		[](graphics::generic_data::tonemapping_data* data) { data->exposure = 4.0f; });
+		[](graphics::generic_data::tonemapping_data* data) { data->exposure = 4.0f;
+		data->tonemapper = tonemapper_selection; });
 
 	glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, Scene_ldr_texture, 0);
 

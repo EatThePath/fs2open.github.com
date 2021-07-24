@@ -337,6 +337,7 @@ int game_zbuffer = 1;
 extern void ssm_init();
 extern void ssm_level_init();
 extern void ssm_process();
+extern int tonemapper_selection;
 
 // static variable to contain the time this version was built
 // commented out for now until
@@ -4516,45 +4517,31 @@ int game_poll()
 				
 				camid cid;
 				float dir_hold = static_light_factor;
-				static_light_factor = 0.01f;
-				cid = game_render_frame_setup();
 				gr_clear();
+				tonemapper_selection = 1;
+				light_reset();
+				gr_reset_clip();
+				cid = game_render_frame_setup();
+				clip_frame_view();
 				game_render_frame( cid );
 				gr_flip();
 				sprintf(tmp_name, NOX("screen%.6ib"), counter );
 				gr_print_screen(tmp_name);
 				
-				static_light_factor = 0.1f;
-				cid = game_render_frame_setup();
-				gr_clear();
-				game_render_frame( cid );
-				gr_flip();
-				sprintf( tmp_name, NOX("screen%.6ic"), counter );
-				gr_print_screen(tmp_name);
-				static_light_factor=dir_hold;
-
-				static_light_factor = 1.0f;
-				cid = game_render_frame_setup();
-				gr_clear();
-				game_render_frame( cid );
-				gr_flip();
-				sprintf( tmp_name, NOX("screen%.6ic"), counter );
-				gr_print_screen(tmp_name);
-				static_light_factor=dir_hold;
 				
-				static_light_factor = 10.0f;
-				cid = game_render_frame_setup();
 				gr_clear();
+				tonemapper_selection = 2;
+				light_reset();
+				gr_reset_clip();
+				cid = game_render_frame_setup();
+				clip_frame_view();
 				game_render_frame( cid );
 				gr_flip();
-				sprintf( tmp_name, NOX("screen%.6id"), counter );
+				sprintf( tmp_name, NOX("screen%.6ic"), counter );
 				gr_print_screen(tmp_name);
 				static_light_factor=dir_hold;
 
-				cid = game_render_frame_setup();
-				gr_clear();
-				game_render_frame( cid );
-				gr_flip();
+				tonemapper_selection = 1;
 
 				counter++;
 				if (counter > 999999)

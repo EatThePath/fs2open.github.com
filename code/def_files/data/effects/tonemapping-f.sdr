@@ -7,9 +7,11 @@ uniform sampler2D tex;
 
 layout (std140) uniform genericData {
 	float exposure;
+	int tonemapper;
 };
 
-vec3 Uncharted2Tonemapping(vec3 hdr_color)
+
+vec3 Uncharted2ToneMapping(vec3 hdr_color) // filmic
 {
 	float A = 0.15;
 	float B = 0.50;
@@ -17,15 +19,54 @@ vec3 Uncharted2Tonemapping(vec3 hdr_color)
 	float D = 0.20;
 	float E = 0.02;
 	float F = 0.30;
-	return ((hdr_color*(A*hdr_color+C*B)+D*E)/(hdr_color*(A*hdr_color+B)+D*F))-E/F;
+	float W = 11.2;
+	hdr_color = ((hdr_color * (A * hdr_color + C * B) + D * E) / (hdr_color * (A * hdr_color + B) + D * F)) - E / F;
+	float white = ((W * (A * W + C * B) + D * E) / (W * (A * W + B) + D * F)) - E / F;
+	hdr_color /= white;
+	
+	return hdr_color;
 }
+
+vec3 rtt_and_odt_fit(vec3 v)
+{
+    vec3 a = v * (v + 0.0245786f) - 0.000090537f;
+    vec3 b = v * (0.983729f * v + 0.4329510f) + 0.238081f;
+    return a / 
+	b;
+}
+
+
+const mat3 aces_input = mat3(vec3(0.59719, 0.07600, 0.02840),
+                             vec3(0.35458, 0.90834, 0.13383),
+                             vec3(0.04823, 0.01566, 0.83777)
+                            );
+
+const mat3 aces_output = mat3(vec3( 1.60475, -0.10208, -0.00327),
+                              vec3(-0.53108,  1.10813, -0.07276),
+                              vec3(-0.07367, -0.00605,  1.07602)
+                             );
+
+vec3 aces(vec3 hdr_color)
+{
+    hdr_color = aces_input * hdr_color;
+    hdr_color = rtt_and_odt_fit(hdr_color);
+    hdr_color = aces_output * hdr_color;
+	return hdr_color;
+}
+
 
 void main()
 {
 	vec4 color = texture(tex, fragTexCoord.xy);
-	// Tone mapping using John Hable's Uncharted 2 tonemapping algorithm.
-	float whitepoint = 11.2f; // hardcoded whitepoint value from Hable's algo
-	color.rgb = Uncharted2Tonemapping(color.rgb * exposure) / Uncharted2Tonemapping(vec3(whitepoint));
-	color.rgb = linear_to_srgb(color.rgb); // return from linear color space to SRGB color space
+	color *= exposure;
+	switch(tonemapper){
+		case 1:
+			color.rgb = Uncharted2ToneMapping(color.rgb);
+			break;
+		case 2:
+			color.rgb = aces(color.rgb);
+			break;
+	}
+	color = linear_to_srgb(color); // return from linear color space to SRGB color space
 	fragOut0 = vec4(color.rgb, 1.0);
 }
