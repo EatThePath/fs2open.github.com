@@ -4543,9 +4543,13 @@ int game_poll()
 				sprintf( tmp_name, NOX("screen%.6i"), counter );
 				gr_print_screen(tmp_name);
 
+				screenshot_premute(tmp_name, "li", 0);
 				screenshot_premute(tmp_name, "uc", 1);
 				screenshot_premute(tmp_name, "ac", 2);
-				
+				screenshot_premute(tmp_name, "aa", 3);
+				screenshot_premute(tmp_name, "ci", 4);
+				screenshot_premute(tmp_name, "rj", 5);
+				screenshot_premute(tmp_name, "re", 6);
 				counter++;
 				if (counter > 999999)
 				{
