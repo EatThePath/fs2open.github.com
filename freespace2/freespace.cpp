@@ -4367,7 +4367,7 @@ void screenshot_premute(const char* name_base,const char* name_suffix, int mappe
 	tonemapper_selection = mapper;	
 	 
 	gr_clear();
-	light_reset();
+	partial_light_reset();
 	gr_reset_clip();
 	camid cid = game_render_frame_setup();
 	clip_frame_view();

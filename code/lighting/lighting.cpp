@@ -102,6 +102,22 @@ void light_reset()
 	Lights.clear();
 	Num_lights = 0;
 }
+
+void partial_light_reset()
+{
+	Static_light.clear();
+	Num_lights = 0;
+	SCP_vector<light> temp;
+	for(light & l : Lights){
+		
+		if (l.type != Light_Type::Directional){
+			temp.push_back(l);
+			Num_lights++;
+		}
+	}
+	Lights.clear();
+	Lights = temp;
+}
 extern vec3d Object_position;
 
 /**

@@ -98,6 +98,7 @@ public:
 };
 
 extern void light_reset();
+extern void partial_light_reset();
 
 // Intensity - how strong the light is.  1.0 will cast light around 5meters or so.
 // r,g,b - only used for colored lighting. Ignored currently.
