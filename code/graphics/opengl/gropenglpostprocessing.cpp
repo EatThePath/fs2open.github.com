@@ -25,6 +25,11 @@
 extern bool PostProcessing_override;
 extern int opengl_check_framebuffer();
 extern int tonemapper_selection;
+extern float PPC_toeS;
+extern float PPC_toeL;
+extern float PPC_shoulderS;
+extern float PPC_shoulderL;
+extern float PPC_shoulderA;
 // Needed to track where the FXAA shaders are
 // In case we don't find the shaders at all, this override is needed
 bool fxaa_unavailable = false;
@@ -69,7 +74,12 @@ void opengl_post_pass_tonemap()
 
 	opengl_set_generic_uniform_data<graphics::generic_data::tonemapping_data>(
 		[](graphics::generic_data::tonemapping_data* data) { data->exposure = 4.0f;
-		data->tonemapper = tonemapper_selection; });
+		data->tonemapper = tonemapper_selection;
+		data->toeS = PPC_toeS;
+		data->toeL = PPC_toeL;
+		data->shoulderS = PPC_shoulderS;
+		data->shoulderL = PPC_shoulderL;
+		data->shoulderA = PPC_shoulderA; });
 
 	glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, Scene_ldr_texture, 0);
 

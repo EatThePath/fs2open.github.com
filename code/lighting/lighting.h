@@ -42,7 +42,9 @@ enum tonemapper :int {
 	tnm_Aces_Approx = 3,
 	tnm_Cineon = 4,
 	tnm_Reinhard_Jodie = 5,
-	tnm_Reinhard_Extended = 6
+	tnm_Reinhard_Extended = 6,
+	tnm_PPC = 7,
+	tnm_PPC_RGB= 8
 };
 
 
