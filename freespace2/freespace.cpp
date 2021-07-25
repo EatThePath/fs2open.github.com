@@ -337,6 +337,11 @@ extern void ssm_init();
 extern void ssm_level_init();
 extern void ssm_process();
 extern int tonemapper_selection;
+extern float PPC_toeS;
+extern float PPC_toeL;
+extern float PPC_shoulderS;
+extern float PPC_shoulderL;
+extern float PPC_shoulderA;
 
 // static variable to contain the time this version was built
 // commented out for now until
@@ -4381,7 +4386,13 @@ void screenshot_premute(const char* name_base,const char* name_suffix, int mappe
 	camid cid = game_render_frame_setup();
 	clip_frame_view();
 	game_render_frame( cid );
+	gr_set_color_fast(&Color_bright_green);
+	gr_printf_menu(30, 52, name_suffix);
+	gr_set_color_fast(&Color_black);
+	gr_printf_menu(30, 74, name_suffix);
 	gr_flip();
+
+	//gr_printf_no_resize(gr_screen.center_offset_x + 20, gr_screen.center_offset_y + 300, name_suffix);
 	//sprintf(tmp_name, NOX("screen%.6ib"), counter );
 	gr_print_screen(filename.c_str());
 	tonemapper_selection = original_tone;
@@ -4550,6 +4561,30 @@ int game_poll()
 				screenshot_premute(tmp_name, "ci", 4);
 				screenshot_premute(tmp_name, "rj", 5);
 				screenshot_premute(tmp_name, "re", 6);
+				//defaults
+				PPC_toeS = 0.5;
+				PPC_toeL = 0.5;
+				PPC_shoulderS = 0.0;
+				PPC_shoulderL = 0.5;
+				PPC_shoulderA = 0.1;
+				screenshot_premute(tmp_name, "p1", 7);
+				screenshot_premute(tmp_name, "r1", 8);
+				//me screwing around
+				PPC_toeS = 0.35f;
+				PPC_toeL = 0.26f;
+				PPC_shoulderS = 4.0f;
+				PPC_shoulderL = 0.85f;
+				PPC_shoulderA = 0.0f;
+				screenshot_premute(tmp_name, "p2", 7);
+				screenshot_premute(tmp_name, "r2", 8);
+				//me screwing around
+				PPC_toeS = 0.35f;
+				PPC_toeL = 0.82f;
+				PPC_shoulderS = 0.0f;
+				PPC_shoulderL = 0.24f;
+				PPC_shoulderA = 5.8f;
+				screenshot_premute(tmp_name, "p3", 7);
+				screenshot_premute(tmp_name, "r3", 8);
 				counter++;
 				if (counter > 999999)
 				{

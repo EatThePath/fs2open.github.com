@@ -226,8 +226,13 @@ struct passthrough_data {
 struct tonemapping_data {
 	float exposure;
 	int tonemapper;
-
-	float pad[2];
+	float toeS;
+	float toeL;
+	
+	float shoulderS;
+	float shoulderL;
+	float shoulderA;
+	float pad[1];
 };
 
 struct smaa_data {
