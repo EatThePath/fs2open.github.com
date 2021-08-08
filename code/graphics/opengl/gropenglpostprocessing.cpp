@@ -16,6 +16,7 @@
 #include "graphics/util/uniform_structs.h"
 #include "io/timer.h"
 #include "lighting/lighting.h"
+#include "lighting/lighting_profiles.h"
 #include "mod_table/mod_table.h"
 #include "nebula/neb.h"
 #include "parse/parselo.h"
@@ -74,7 +75,7 @@ void opengl_post_pass_tonemap()
 
 	opengl_set_generic_uniform_data<graphics::generic_data::tonemapping_data>(
 		[](graphics::generic_data::tonemapping_data* data) { data->exposure = 4.0f;
-		data->tonemapper = tonemapper_selection;
+		data->tonemapper = light_profile::current_tonemapper();
 		data->toeS = PPC_toeS;
 		data->toeL = PPC_toeL;
 		data->shoulderS = PPC_shoulderS;

@@ -88,7 +88,7 @@ void light_profile::read_tables(const char *filename)
 					stuff_string(buffer,F_NAME);
 					line.i = 0;
 					value_key =  LPV_MAPPER;
-					SCP_toupper(buffer);
+					SCP_tolower(buffer);
 					//I wanted to do a switch statement
 					//I don't know how to make that work with scpstrings
 					if(buffer == "linear")
@@ -109,7 +109,7 @@ void light_profile::read_tables(const char *filename)
 				if(value_key != LPV_NULL){
 					next_profile->insert(
 					std::pair<LIGHT_PROFILE_VALUE,light_profile_table_line>
-					(LPV_NAME, line) );
+					(value_key, line) );
 				}
 			}
 			raw_light_profiles.push_back(*next_profile);
@@ -125,7 +125,7 @@ void light_profile::read_tables(const char *filename)
 bool map_exists(SCP_unordered_map<LIGHT_PROFILE_VALUE,light_profile_table_line>* map, LIGHT_PROFILE_VALUE k){
 	return( map->find(k)!=map->end());
 }
-int light_profile::current_tonemmaper(){
+int light_profile::current_tonemapper(){
 	return current_light_profile.tonemapper;
 }
 void light_profile::create_profiles(){

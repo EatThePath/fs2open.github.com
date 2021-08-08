@@ -67,5 +67,5 @@ public:
 	static void load_profiles();
 	static void read_tables(const char *filename);
 	static void create_profiles();
-	static int current_tonemmaper();
+	static int current_tonemapper();
 };
