@@ -35,18 +35,6 @@ enum class Light_Type : int {
 };
 
 
-enum tonemapper :int {
-	tnm_Linear = 0,
-	tnm_Uncharted = 1,
-	tnm_Aces = 2,
-	tnm_Aces_Approx = 3,
-	tnm_Cineon = 4,
-	tnm_Reinhard_Jodie = 5,
-	tnm_Reinhard_Extended = 6,
-	tnm_PPC = 7,
-	tnm_PPC_RGB= 8
-};
-
 
 typedef struct light {
 	Light_Type type;							// What type of light this is
