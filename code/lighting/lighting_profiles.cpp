@@ -18,7 +18,9 @@ int default_light_profile_index = 0;
 /*
 ;So what's a lighting profile look like?
 ;IMO there's no need for ordering save for names being the delimiter.
-;There's no need for a prefix character either, newlines to : is the identifier and go fuck yourself
+;There's no need for a prefix character either, newlines to : is the identifier -
+;		Actually I always assumed newlines were singificant to tables and that's not true!
+;		So I need to either make it true for this case or use a distinct marker character.
 */
 light_profile* light_profile::find_by_name(SCP_string *name){
 	for(auto& lp : light_profiles)
