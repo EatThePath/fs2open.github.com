@@ -61,6 +61,7 @@ void activate_default_profile(){
 }
 
 void light_profile::load_profiles(){
+	mprintf(("TBM  =>  Starting parse of lighting profiles ...\n"));
 	newparse_init();
 	newparse_all();
 	build_real_tables();
@@ -290,7 +291,8 @@ void light_profile::newparse_nextline(const char *blame, SCP_string *const profi
 			line->value_name=key;
 			line->set=true;
 			line->blame = blame;
-			newparse_set_virtual_table_value(line,&light_profiles_vt_lines);
+			line->line_data = buffer;
+			//newparse_set_virtual_table_value(line,&light_profiles_vt_lines);
 			newparse_set_virtual_table_value(line,&virtual_light_profile_tables);
 		}
 	}
@@ -335,6 +337,7 @@ void light_profile::newparse_set_virtual_table_value(table_line* line, std::map<
 
 void light_profile::build_real_tables(){
 	char inbuffer[512];
+
 	pause_parse();
 	snprintf(Current_filename, sizeof(Current_filename), "virtual light profiles");
 	//get the unique profile names in the virtual tables
@@ -342,10 +345,13 @@ void light_profile::build_real_tables(){
 	SCP_string buffer;
 	for(auto t : virtual_light_profile_tables){
 		auto vlp =t.second;
+		strcpy(inbuffer,"");
+		strcpy(inbuffer,(t.first+"\0").c_str());
 
-		t.first.copy(inbuffer,t.first.length()+'\0');
+		//t.first.copy(inbuffer,t.first.length()+'\0');
 		Mp = inbuffer;
 		stuff_string(buffer,F_RAW);
+		SCP_tolower(buffer);
 
 		auto *lp = new light_profile();
 		lp->reset();
@@ -353,7 +359,9 @@ void light_profile::build_real_tables(){
 
 		SCP_string k ="+Tonemapper:";
 		if(newparse_is_set(&k,&vlp)){
-			vlp[k].line_data.copy(inbuffer,vlp[k].line_data.length()+'\0');
+			strcpy(inbuffer,"");
+			strcpy(inbuffer,(vlp[k].line_data+"\0").c_str());
+			//vlp[k].line_data.copy(inbuffer,vlp[k].line_data.length()+'\0');
 			Mp = inbuffer;
 
 			auto tn = tnm_Uncharted;
