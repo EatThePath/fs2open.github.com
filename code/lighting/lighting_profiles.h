@@ -39,19 +39,16 @@ struct om_table_line{
 	SCP_string blame;
 	bool set = false;
 };
-//load tables into intermedite data structure that holds only the table values, not their final core  representations
-//then compact them down into a 'final table' and THEN prase THAT
-//intermediate table might be able to use a data wrapper that contains metadata
+
 class light_profile{
 public:
-	static void newparse_init();
-	static void newparse_all();
-	static void newparse_file(const char *filename);
-	static void newparse_profile(const char *blame);
-	static void newparse_nextline(const char *blame, SCP_string *const profile_name);
-	static void newparse_set_virtual_table_value(table_line *line, SCP_vector<table_line> *set);
-	static void newparse_set_virtual_table_value(table_line *line, std::map<SCP_string, std::map<SCP_string,om_table_line>> *set);
-	static bool newparse_is_set(SCP_string *const keyname, std::map<SCP_string,om_table_line> *vtable);
+	static void parse_init();
+	static void parse_all();
+	static void parse_file(const char *filename);
+	static void parse_profile(const char *blame);
+	static bool parse_nextline(const char *blame, SCP_string *const profile_name);
+	static void set_virtual_table_value(table_line *line, std::map<SCP_string, std::map<SCP_string,om_table_line>> *set);
+	static bool virtual_table_value_is_set(SCP_string *const keyname, std::map<SCP_string,om_table_line> *vtable);
 	static void build_real_tables();
 	SCP_string name;
 
@@ -87,7 +84,5 @@ public:
 	static light_profile* find_by_name(SCP_string* name);
 	static void add_default_default();
 	static void load_profiles();
-	static void read_tables(const char *filename);
-	static void create_profiles();
 	static int current_tonemapper();
 };

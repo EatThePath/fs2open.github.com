@@ -8,30 +8,23 @@
 #include <algorithm>
 #include <map>
 
-//A copy of the active light profile is made and used as our working data, so that we can make changes with SEXP and such
-//and then revert easily.
 
 SCP_vector<light_profile> light_profiles;
 
-SCP_vector<SCP_unordered_map<LIGHT_PROFILE_VALUE,light_profile_table_line>> raw_light_profiles;
-
+//A copy of the active light profile is made and used as our working data, so that we can make changes with SEXP and such
+//and then revert easily.
 light_profile current_light_profile;
 
+//TODO: What 'default light profile' means is a bit in flux, document once it's figured out
 int default_light_profile_index = 0;
-
 SCP_string default_light_profile_name = "default";
-
-SCP_vector<table_line> light_profiles_vt_lines;
-
-//Going to try cleaner parse logic ugh.
-
-// */
 
 /*
 ;So what's a lighting profile look like?
 ;IMO there's no need for ordering save for names being the delimiter.
 ;There's no need for a prefix character either, newlines to : is the identifier -
-;		Actually I always assumed newlines were singificant to tables and that's not true!
+;		Actually I always assumed newlines were singificant to tables and that's
+;			ACTUALLY JOKES IT'S TRUE AFTER ALL disregrard everything in this block I need to rethink.
 ;		So I need to either make it true for this case or use a distinct marker character.
 */
 light_profile* light_profile::find_by_name(SCP_string *name){
@@ -43,7 +36,6 @@ light_profile* light_profile::find_by_name(SCP_string *name){
 	}
 	return nullptr;
 }
-
 
 void activate_profile(light_profile* base){
 	current_light_profile.name = base->name;
@@ -60,139 +52,10 @@ void activate_default_profile(){
 	activate_profile(base);
 }
 
-void light_profile::load_profiles(){
-	mprintf(("TBM  =>  Starting parse of lighting profiles ...\n"));
-	newparse_init();
-	newparse_all();
-	build_real_tables();
-	activate_default_profile();
-	/*
-	if (cf_exists_full("lighting_profiles.tbl", CF_TYPE_TABLES))
-		light_profile::read_tables("lighting_profiles.tbl");
-	parse_modular_table("*-ltp.tbm", light_profile::read_tables);
-	light_profile::create_profiles();
-	activate_default_profile();*/
-}
-void light_profile::read_tables(const char *filename)
-{
-	SCP_string default_name;
-	SCP_string buffer;
-	SCP_unordered_map<LIGHT_PROFILE_VALUE,light_profile_table_line> *next_profile;
-	light_profile_table_line line;
-
-	try
-	{
-		if (filename == nullptr)
-			read_file_text_from_default(defaults_get_file("lighting_profiles.tbl"));
-		else
-			read_file_text(filename, CF_TYPE_TABLES);
-
-		reset_parse();
-		if(optional_string("Default profile:")){
-			stuff_string(default_light_profile_name,F_NAME);
-		}
-		while ( !check_for_string("#End") && required_string("+Name:"))
-		{
-			buffer.clear();
-			next_profile = new SCP_unordered_map<LIGHT_PROFILE_VALUE,light_profile_table_line>;
-			stuff_string(buffer,F_NAME);
-			SCP_tolower(buffer);
-			line.s = buffer;
-			next_profile->insert(
-				std::pair<LIGHT_PROFILE_VALUE,light_profile_table_line>
-				(LPV_NAME, line) );
-			while (!check_for_string("Name:") && !check_for_string("#End")){
-				LIGHT_PROFILE_VALUE value_key = LPV_NULL;
-				buffer.clear();
-				if(optional_string("Tonemapper:")){
-					stuff_string(buffer,F_NAME);
-					line.i = 0;
-					value_key =  LPV_MAPPER;
-					SCP_tolower(buffer);
-					//I wanted to do a switch statement
-					//I don't know how to make that work with scpstrings
-					if(buffer == "linear")
-						line.i = tnm_Linear;
-					else if(buffer=="aces")
-						line.i = tnm_Aces;
-					else if(buffer=="aces approximate")
-						line.i = tnm_Aces_Approx;
-					else if((buffer=="uncharted") ||( buffer=="uncharted 2"))
-						line.i = tnm_Uncharted;
-					else{
-						value_key = LPV_NULL;
-						//put debug error here
-					}
-
-				}
-				//After we've checked every possible value, if it's one of them, stick in the wip table
-				if(value_key != LPV_NULL){
-					next_profile->insert(
-					std::pair<LIGHT_PROFILE_VALUE,light_profile_table_line>
-					(value_key, line) );
-				}
-			}
-			raw_light_profiles.push_back(*next_profile);
-		}
-    }	catch (const parse::ParseException& e)
-	{
-		mprintf(("TABLES: Unable to parse '%s'!  Error message = %s.\n", (filename) ? filename : "<default ai_profiles.tbl>", e.what()));
-		return;
-	}
-}
-
-
-bool map_exists(SCP_unordered_map<LIGHT_PROFILE_VALUE,light_profile_table_line>* map, LIGHT_PROFILE_VALUE k){
-	return( map->find(k)!=map->end());
-}
 int light_profile::current_tonemapper(){
 	return current_light_profile.tonemapper;
 }
-void light_profile::create_profiles(){
-	SCP_vector<SCP_string> profile_names;
-	for(auto& r : raw_light_profiles){
-		if(map_exists(&r ,LPV_NAME) &&
-		!SCP_vector_contains(profile_names, r[LPV_NAME].s)) {
-			profile_names.push_back((r[LPV_NAME].s));
 
-		}
-	}
-	SCP_vector<SCP_unordered_map<LIGHT_PROFILE_VALUE,light_profile_table_line>> subtotals;
-	for(auto& s : profile_names){
-		SCP_unordered_map<LIGHT_PROFILE_VALUE,light_profile_table_line>* next_subtotal = nullptr;
-		//itterate through all the things
-		// copy the first one that matches the name to the subtotal
-		// then overwrite any lines with subsequent matches
-		for(auto & raw_light_profile : raw_light_profiles){
-			if(next_subtotal == nullptr && raw_light_profile[LPV_NAME].s ==s) {
-				next_subtotal = &raw_light_profile;
-			}
-			else if(raw_light_profile[LPV_NAME].s ==s){
-				//we need to do this shit for every single one fuck argh.
-				if(map_exists(&raw_light_profile , LPV_MAPPER)){
-					next_subtotal->at(LPV_MAPPER).i=raw_light_profile[LPV_MAPPER].i;
-				}
-			}
-		}
-		subtotals.push_back(*next_subtotal);
-	}
-	//the semitotals now contains only what we need right?
-	for(auto& st : subtotals){
-		auto *lp = new light_profile();
-		lp->reset();
-		lp->name=st.at(LPV_NAME).s;
-		if(map_exists(&st, LPV_MAPPER)){
-			lp->tonemapper = st.at(LPV_MAPPER).i;
-		}
-		light_profiles.push_back(*lp);
-	}
-	if(light_profiles.empty()){
-		auto* lp = new light_profile();
-		lp->name = "default";
-		default_light_profile_name = "default";
-		light_profiles.push_back(*lp);
-	}
-}
 void light_profile::reset(){
     exposure = 4.0f;
 	name = "";
@@ -224,41 +87,75 @@ void light_profile::reset(){
 }
 
 
-
+//*************PARSE LOGIC***************
+//Every 'actionable' line of a table is read into a map of said lines
+//No actual profile objects are created until all tables are read into this map
+//If duplicate lines are encountered, then the value is overwritten at during the tableread
+//This creates a flattened 'virtual table' representing all the table files laid over each other
+//Thats then is parsed by asking the map for the values needed to set up each property of the table
 
 SCP_vector<SCP_string> light_profile_value_names;
 std::map<SCP_string, std::map<SCP_string,om_table_line>> virtual_light_profile_tables;
-void light_profile:: newparse_init(){
-	light_profile_value_names.clear();
-	light_profile_value_names.push_back("+Tonemapper:");
-}
-void light_profile:: newparse_all()
-{
-	if (cf_exists_full("lighting_profiles.tbl", CF_TYPE_TABLES)){
-		light_profile::newparse_file("lighting_profiles.tbl");
-	}
-	parse_modular_table("*-ltp.tbm", light_profile::newparse_file);
-	light_profile::create_profiles();
+
+void light_profile::load_profiles(){
+	mprintf(("TBM  =>  Starting parse of lighting profiles ...\n"));
+	parse_init();
+	parse_all();
+	build_real_tables();
 	activate_default_profile();
 }
+//This builds the dictionary of line names that the table will want to parse
+//This is stand-in for eventually using the parse-items infrastructure
+void light_profile:: parse_init(){
+	light_profile_value_names.clear();
+	light_profile_value_names.push_back("+Tonemapper:");
+	add_default_default();
+}
 
+//The implicit table that sets the 'retail' values, sort of redundant with reset but
+//  if filled out it'll allow a table dump possibility later.
+void light_profile::add_default_default(){
+	default_light_profile_name = "default";
+	auto *dtl =new table_line;
+	dtl->entity_name=default_light_profile_name;
+	dtl->blame="BUILT IN-FSO SOURCE";
+	dtl->value_name="+Tonemapper:";
+	dtl->line_data="Uncharted 2";
+	dtl->set = true;
+	set_virtual_table_value(dtl,&virtual_light_profile_tables);
+}
 
-void light_profile::newparse_file(const char *filename)
+//The logic for grabbing all the parseable files
+void light_profile:: parse_all()
 {
+	if (cf_exists_full("lighting_profiles.tbl", CF_TYPE_TABLES)){
+		light_profile::parse_file("lighting_profiles.tbl");
+	}
+	parse_modular_table("*-ltp.tbm", light_profile::parse_file);
+}
 
-	SCP_string default_name;
+//Handle an individual file.
+void light_profile::parse_file(const char *filename)
+{
 	SCP_string buffer;
 	try
 	{
-		if (filename == nullptr)
-			read_file_text_from_default(defaults_get_file("lighting_profiles.tbl"));
-		else
-			read_file_text(filename, CF_TYPE_TABLES);
-
+		if (filename == nullptr){
+			//Normal parsing uses this:
+			//read_file_text_from_default(defaults_get_file("lighting_profiles.tbl"));
+			//To set the defaults, I intend to set them as virtual table lines before here
+			//so, if no file, gtfo.
+			return;
+		}
+		read_file_text(filename, CF_TYPE_TABLES);
 		reset_parse();
-		//Defaults and stuff will go here next.
+
+		//There should be a meta-data section before getting to the profiles
+		//Graceful handling of different sections tbd
 		while ( !check_for_string("#End") && required_string("+Profile:")){
-			newparse_profile(filename);
+			//maybe should validate the name of the thing here, may even
+			//  be better to consume and pass it here, not sure.
+			parse_profile(filename);
 		}
     }	catch (const parse::ParseException& e)
 	{
@@ -267,21 +164,37 @@ void light_profile::newparse_file(const char *filename)
 	}
 }
 
-void light_profile::newparse_profile(const char *blame)//--, SCP_string *profile_name)
+//Each discrete entity is handled in this function
+//  it may be good later to have this take a pointer to the table of the
+//  thing that it is parsing, a parse items dictionary etc, and an optional
+//  identifier if it is a 'subtable' section(beam sections, etc)
+void light_profile::parse_profile(const char *blame)
 {
+	SCP_string profile_name;
+	profile_name.clear();
+	//The calling function is currently expected to have consumed the token before the
+	//  name but left the name there.
+	//  needs some validation and an early exit, I guess...
+	stuff_string(profile_name,F_RAW);
+	SCP_tolower(profile_name);
 
-	SCP_string buffer;
-	buffer.clear();
-	stuff_string(buffer,F_RAW);
-	while ( !check_for_string("#End") && !check_for_string("+Profile:")){
-		newparse_nextline(blame,&buffer);
+	if(profile_name.length()<1)
+	{
+		//TODO make some error noise
+		return;
 	}
+	while(parse_nextline(blame,&profile_name)){}
+	//Nextline returns true whenever it finds a next line, if it returns false we're /
+	//  done and will yeild back to the file for section checking and stuff
+	
 }
 
-
-void light_profile::newparse_nextline(const char *blame, SCP_string *const profile_name){
+//Returns true if it processed at least one line
+//  can return potentially loop through all lines of a profile in one go if they're in the right order
+bool light_profile::parse_nextline(const char *blame, SCP_string *const profile_name){
 
 	SCP_string buffer;
+	bool found = false;
 	for(auto& key : light_profile_value_names){
 		if(optional_string(key.c_str())){
 			buffer.clear();
@@ -292,30 +205,22 @@ void light_profile::newparse_nextline(const char *blame, SCP_string *const profi
 			line->set=true;
 			line->blame = blame;
 			line->line_data = buffer;
-			//newparse_set_virtual_table_value(line,&light_profiles_vt_lines);
-			newparse_set_virtual_table_value(line,&virtual_light_profile_tables);
+			set_virtual_table_value(line,&virtual_light_profile_tables);
+			found = true;
 		}
 	}
-}// */
-
-
-void light_profile::newparse_set_virtual_table_value(table_line* line, SCP_vector<table_line>* set){
-	 //this is horrible. I assume ordered maps are better but I haven't done shit with them
-	 for(auto& existing : *set){
-		 if(existing.entity_name == line->entity_name && existing.value_name== line->value_name ){
-			 existing = *line;
-			 return;
-		 }
-	 }
-	 //if the line doesn't exist, add it!
-	set->push_back(*line);
+	return found;
 }
 
-void light_profile::newparse_set_virtual_table_value(table_line* line, std::map<SCP_string, std::map<SCP_string,om_table_line>>* set){
-	 //this is horrible. I assume ordered maps are better but I haven't done shit with them
+//Using maps because otherwise I'm terrified of how long it'll take for my weapon tbms to load
+void light_profile::set_virtual_table_value(table_line* line, std::map<SCP_string, std::map<SCP_string,om_table_line>>* set){
+
+	//these bools are figured here because the conditionlines were getting ugly to my eyes
 	 bool entity_exists = (set->find(line->entity_name)==set->end());
+
 	 bool line_exists = (entity_exists &&
 	 	(*set)[line->entity_name].find(line->value_name) == (*set)[line->entity_name].end());
+
 	 if(!entity_exists){
 		std::map<SCP_string,om_table_line> new_entity;
 		 (*set)[line->entity_name] = new_entity;
@@ -335,21 +240,24 @@ void light_profile::newparse_set_virtual_table_value(table_line* line, std::map<
 	 }
 }
 
+//Now that all the 'virtual tables' are built, make the real profiles from them.
 void light_profile::build_real_tables(){
-	char inbuffer[512];
+	char inbuffer[512]; //TODO: make this better
 
+	//The parser shouldn't be doing anything important right now anyway, but in case it is
 	pause_parse();
 	snprintf(Current_filename, sizeof(Current_filename), "virtual light profiles");
+
 	//get the unique profile names in the virtual tables
 	//build a profile for each one.
 	SCP_string buffer;
 	for(auto t : virtual_light_profile_tables){
+		//Reach up inside the parser and make it do our bidding.
 		auto vlp =t.second;
 		strcpy(inbuffer,"");
 		strcpy(inbuffer,(t.first+"\0").c_str());
-
-		//t.first.copy(inbuffer,t.first.length()+'\0');
 		Mp = inbuffer;
+
 		stuff_string(buffer,F_RAW);
 		SCP_tolower(buffer);
 
@@ -358,15 +266,18 @@ void light_profile::build_real_tables(){
 		lp->name = buffer;
 
 		SCP_string k ="+Tonemapper:";
-		if(newparse_is_set(&k,&vlp)){
+		if(virtual_table_value_is_set(&k,&vlp)){
+
+			//Why two copies? Paranoia.
 			strcpy(inbuffer,"");
 			strcpy(inbuffer,(vlp[k].line_data+"\0").c_str());
-			//vlp[k].line_data.copy(inbuffer,vlp[k].line_data.length()+'\0');
 			Mp = inbuffer;
 
-			auto tn = tnm_Uncharted;
+
+			stuff_string(buffer,F_RAW);
 			SCP_tolower(buffer);
 
+			auto tn = tnm_Uncharted;
 			if(buffer == "linear")
 				tn = tnm_Linear;
 			else if(buffer=="aces")
@@ -382,10 +293,11 @@ void light_profile::build_real_tables(){
 		}
 		light_profiles.push_back(*lp);
 	}
+	//Put the parser back
 	unpause_parse();
 
 }
-bool light_profile::newparse_is_set(SCP_string *const keyname, std::map<SCP_string,om_table_line> *vtable){
+bool light_profile::virtual_table_value_is_set(SCP_string *const keyname, std::map<SCP_string,om_table_line> *vtable){
 	if(vtable->find(*keyname)==vtable->end()){
 		return false;
 	}
