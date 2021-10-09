@@ -6,6 +6,7 @@
 #include "lighting/lighting_profiles.h"
 #include "parse/parselo.h"
 #include <algorithm>
+#include <map>
 
 //A copy of the active light profile is made and used as our working data, so that we can make changes with SEXP and such
 //and then revert easily.
@@ -60,11 +61,16 @@ void activate_default_profile(){
 }
 
 void light_profile::load_profiles(){
+	newparse_init();
+	newparse_all();
+	build_real_tables();
+	activate_default_profile();
+	/*
 	if (cf_exists_full("lighting_profiles.tbl", CF_TYPE_TABLES))
 		light_profile::read_tables("lighting_profiles.tbl");
 	parse_modular_table("*-ltp.tbm", light_profile::read_tables);
 	light_profile::create_profiles();
-	activate_default_profile();
+	activate_default_profile();*/
 }
 void light_profile::read_tables(const char *filename)
 {
@@ -220,7 +226,7 @@ void light_profile::reset(){
 
 
 SCP_vector<SCP_string> light_profile_value_names;
-
+std::map<SCP_string, std::map<SCP_string,om_table_line>> virtual_light_profile_tables;
 void light_profile:: newparse_init(){
 	light_profile_value_names.clear();
 	light_profile_value_names.push_back("+Tonemapper:");
@@ -228,7 +234,7 @@ void light_profile:: newparse_init(){
 void light_profile:: newparse_all()
 {
 	if (cf_exists_full("lighting_profiles.tbl", CF_TYPE_TABLES)){
-		light_profile::read_tables("lighting_profiles.tbl");
+		light_profile::newparse_file("lighting_profiles.tbl");
 	}
 	parse_modular_table("*-ltp.tbm", light_profile::newparse_file);
 	light_profile::create_profiles();
@@ -285,10 +291,7 @@ void light_profile::newparse_nextline(const char *blame, SCP_string *const profi
 			line->set=true;
 			line->blame = blame;
 			newparse_set_virtual_table_value(line,&light_profiles_vt_lines);
-			/*
-			//newparse_set_virtual_table_value
-	      	//newparse_set_virtual_table_value(line,&light_profiles_vt_lines);
-			  */
+			newparse_set_virtual_table_value(line,&virtual_light_profile_tables);
 		}
 	}
 }// */
@@ -306,9 +309,77 @@ void light_profile::newparse_set_virtual_table_value(table_line* line, SCP_vecto
 	set->push_back(*line);
 }
 
+void light_profile::newparse_set_virtual_table_value(table_line* line, std::map<SCP_string, std::map<SCP_string,om_table_line>>* set){
+	 //this is horrible. I assume ordered maps are better but I haven't done shit with them
+	 bool entity_exists = (set->find(line->entity_name)==set->end());
+	 bool line_exists = (entity_exists &&
+	 	(*set)[line->entity_name].find(line->value_name) == (*set)[line->entity_name].end());
+	 if(!entity_exists){
+		std::map<SCP_string,om_table_line> new_entity;
+		 (*set)[line->entity_name] = new_entity;
+	 }
+	 if(!line_exists){
+		 om_table_line new_vt_line;
+		 new_vt_line.line_data = line->line_data;
+		 new_vt_line.blame = line->blame;
+		 new_vt_line.set = true;
+		 (*set)[line->entity_name][line->value_name] = new_vt_line;
+	 }
+	 else{
+		 auto& vtline =	 (*set)[line->entity_name][line->value_name];
+		 vtline.line_data = line->line_data;
+		 vtline.blame = line->blame;
+		 vtline.set = true;
+	 }
+}
 
 void light_profile::build_real_tables(){
+	char inbuffer[512];
+	pause_parse();
+	snprintf(Current_filename, sizeof(Current_filename), "virtual light profiles");
 	//get the unique profile names in the virtual tables
 	//build a profile for each one.
+	SCP_string buffer;
+	for(auto t : virtual_light_profile_tables){
+		auto vlp =t.second;
 
+		t.first.copy(inbuffer,t.first.length()+'\0');
+		Mp = inbuffer;
+		stuff_string(buffer,F_RAW);
+
+		auto *lp = new light_profile();
+		lp->reset();
+		lp->name = buffer;
+
+		SCP_string k ="+Tonemapper:";
+		if(newparse_is_set(&k,&vlp)){
+			vlp[k].line_data.copy(inbuffer,vlp[k].line_data.length()+'\0');
+			Mp = inbuffer;
+
+			auto tn = tnm_Uncharted;
+			SCP_tolower(buffer);
+
+			if(buffer == "linear")
+				tn = tnm_Linear;
+			else if(buffer=="aces")
+				tn = tnm_Aces;
+			else if(buffer=="aces approximate")
+				tn = tnm_Aces_Approx;
+			else if((buffer=="uncharted") ||( buffer=="uncharted 2"))
+				tn = tnm_Uncharted;
+			else{
+				//error goes here
+			}
+			lp->tonemapper = tn;
+		}
+		light_profiles.push_back(*lp);
+	}
+	unpause_parse();
+
+}
+bool light_profile::newparse_is_set(SCP_string *const keyname, std::map<SCP_string,om_table_line> *vtable){
+	if(vtable->find(*keyname)==vtable->end()){
+		return false;
+	}
+	return vtable->at(*keyname).set;
 }
