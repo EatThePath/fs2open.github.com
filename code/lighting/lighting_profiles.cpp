@@ -5,6 +5,8 @@
 #include "globalincs/vmallocator.h"
 #include "lighting/lighting_profiles.h"
 #include "parse/parselo.h"
+#include <algorithm>
+
 //A copy of the active light profile is made and used as our working data, so that we can make changes with SEXP and such
 //and then revert easily.
 
@@ -15,6 +17,15 @@ SCP_vector<SCP_unordered_map<LIGHT_PROFILE_VALUE,light_profile_table_line>> raw_
 light_profile current_light_profile;
 
 int default_light_profile_index = 0;
+
+SCP_string default_light_profile_name = "default";
+
+SCP_vector<table_line> light_profiles_vt_lines;
+
+//Going to try cleaner parse logic ugh.
+
+// */
+
 /*
 ;So what's a lighting profile look like?
 ;IMO there's no need for ordering save for names being the delimiter.
@@ -32,7 +43,6 @@ light_profile* light_profile::find_by_name(SCP_string *name){
 	return nullptr;
 }
 
-SCP_string default_light_profile_name = "default";
 
 void activate_profile(light_profile* base){
 	current_light_profile.name = base->name;
@@ -48,6 +58,7 @@ void activate_default_profile(){
 	}
 	activate_profile(base);
 }
+
 void light_profile::load_profiles(){
 	if (cf_exists_full("lighting_profiles.tbl", CF_TYPE_TABLES))
 		light_profile::read_tables("lighting_profiles.tbl");
@@ -73,7 +84,7 @@ void light_profile::read_tables(const char *filename)
 		if(optional_string("Default profile:")){
 			stuff_string(default_light_profile_name,F_NAME);
 		}
-		while ( !check_for_string("#End") && required_string("Name:"))
+		while ( !check_for_string("#End") && required_string("+Name:"))
 		{
 			buffer.clear();
 			next_profile = new SCP_unordered_map<LIGHT_PROFILE_VALUE,light_profile_table_line>;
@@ -203,4 +214,101 @@ void light_profile::reset(){
 	laser_radius_factor = 1.0f;
     other_point_radius_factor = 1.0f;
     tube_radius_factor = 1.0f;
+}
+
+
+
+
+SCP_vector<SCP_string> light_profile_value_names;
+
+void light_profile:: newparse_init(){
+	light_profile_value_names.clear();
+	light_profile_value_names.push_back("+Tonemapper:");
+}
+void light_profile:: newparse_all()
+{
+	if (cf_exists_full("lighting_profiles.tbl", CF_TYPE_TABLES)){
+		light_profile::read_tables("lighting_profiles.tbl");
+	}
+	parse_modular_table("*-ltp.tbm", light_profile::newparse_file);
+	light_profile::create_profiles();
+	activate_default_profile();
+}
+
+
+void light_profile::newparse_file(const char *filename)
+{
+
+	SCP_string default_name;
+	SCP_string buffer;
+	try
+	{
+		if (filename == nullptr)
+			read_file_text_from_default(defaults_get_file("lighting_profiles.tbl"));
+		else
+			read_file_text(filename, CF_TYPE_TABLES);
+
+		reset_parse();
+		//Defaults and stuff will go here next.
+		while ( !check_for_string("#End") && required_string("+Profile:")){
+			newparse_profile(filename);
+		}
+    }	catch (const parse::ParseException& e)
+	{
+		mprintf(("TABLES: Unable to parse '%s'!  Error message = %s.\n", (filename) ? filename : "<default ai_profiles.tbl>", e.what()));
+		return;
+	}
+}
+
+void light_profile::newparse_profile(const char *blame)//--, SCP_string *profile_name)
+{
+
+	SCP_string buffer;
+	buffer.clear();
+	stuff_string(buffer,F_RAW);
+	while ( !check_for_string("#End") && !check_for_string("+Profile:")){
+		newparse_nextline(blame,&buffer);
+	}
+}
+
+
+void light_profile::newparse_nextline(const char *blame, SCP_string *const profile_name){
+
+	SCP_string buffer;
+	for(auto& key : light_profile_value_names){
+		if(optional_string(key.c_str())){
+			buffer.clear();
+			stuff_string(buffer,F_RAW);
+			auto *line = new table_line();
+			line->entity_name=*profile_name;
+			line->value_name=key;
+			line->set=true;
+			line->blame = blame;
+			newparse_set_virtual_table_value(line,&light_profiles_vt_lines);
+			/*
+			//newparse_set_virtual_table_value
+	      	//newparse_set_virtual_table_value(line,&light_profiles_vt_lines);
+			  */
+		}
+	}
+}// */
+
+
+void light_profile::newparse_set_virtual_table_value(table_line* line, SCP_vector<table_line>* set){
+	 //this is horrible. I assume ordered maps are better but I haven't done shit with them
+	 for(auto& existing : *set){
+		 if(existing.entity_name == line->entity_name && existing.value_name== line->value_name ){
+			 existing = *line;
+			 return;
+		 }
+	 }
+	 //if the line doesn't exist, add it!
+	set->push_back(*line);
+}
+
+
+void light_profile::build_real_tables(){
+	//get the unique profile names in the virtual tables
+	//build a profile for each one.
+
 }

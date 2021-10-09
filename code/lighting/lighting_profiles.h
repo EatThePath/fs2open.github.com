@@ -3,6 +3,7 @@
 #pragma once
 
 
+#include "globalincs/vmallocator.h"
 enum tonemapper :int {
 	tnm_Linear = 0,
 	tnm_Uncharted = 1,
@@ -25,12 +26,25 @@ struct light_profile_table_line{
 	bool b;
 	SCP_string s;
 };
-
+struct table_line{
+	SCP_string entity_name;
+	SCP_string value_name;
+	SCP_string line_data;
+	SCP_string blame;
+	bool set = false;
+};
 //load tables into intermedite data structure that holds only the table values, not their final core  representations
 //then compact them down into a 'final table' and THEN prase THAT
 //intermediate table might be able to use a data wrapper that contains metadata
 class light_profile{
 public:
+	static void newparse_init();
+	static void newparse_all();
+	static void newparse_file(const char *filename);
+	static void newparse_profile(const char *blame);
+	static void newparse_nextline(const char *blame, SCP_string *const profile_name);
+	static void newparse_set_virtual_table_value(table_line *line, SCP_vector<table_line> *set);
+	static void build_real_tables();
 	SCP_string name;
 
     int tonemapper;
