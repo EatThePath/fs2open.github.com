@@ -94,7 +94,6 @@ class light_profile_manager{
 	static void activate(light_profile* base);
 	static int count();
 	static light_profile* at(int i);
-	static light_profile* at(SCP_string* name);
 	static light_profile* find_by_name(SCP_string *name);
 	static void activate_default_profile();
 	static int current_tonemapper();

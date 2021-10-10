@@ -3,9 +3,13 @@
 #include "globalincs/globals.h"
 #include "globalincs/pstypes.h"
 #include "globalincs/vmallocator.h"
+#include "lighting/lighting.h"
 #include "lighting/lighting_profiles.h"
+#include "osapi/dialogs.h"
 #include "parse/parselo.h"
 #include <algorithm>
+#include <cctype>
+#include <cstddef>
 #include <map>
 #include <string>
 
@@ -102,19 +106,42 @@ void light_profile:: parse_init(){
 	light_profile_value_names.push_back("+laser radius factor:");
 	light_profile_value_names.push_back("+other point radius factor:");
 	light_profile_value_names.push_back("+tube radius factor:");
-	add_default_default();
 }
 
 //The implicit table that sets the 'retail' values, sort of redundant with reset but
 //  if filled out it'll allow a table dump possibility later.
 void light_profile::add_default_default(){
-	default_light_profile_name = "default";
+	default_light_profile_name = "Uncharted 2";
 	auto *dtl =new table_line;
 	dtl->entity_name=default_light_profile_name;
 	dtl->blame="BUILT IN-FSO SOURCE";
 	dtl->value_name="+Tonemapper:";
 	dtl->line_data="Uncharted 2";
 	dtl->set = true;
+	set_virtual_table_value(dtl,&virtual_light_profile_tables);
+
+	dtl->entity_name=dtl->line_data="linear";
+	set_virtual_table_value(dtl,&virtual_light_profile_tables);
+
+	dtl->entity_name=dtl->line_data="Aces";
+	set_virtual_table_value(dtl,&virtual_light_profile_tables);
+
+	dtl->entity_name=dtl->line_data="aces approximate";
+	set_virtual_table_value(dtl,&virtual_light_profile_tables);
+
+	dtl->entity_name=dtl->line_data="cineon";
+	set_virtual_table_value(dtl,&virtual_light_profile_tables);
+
+	dtl->entity_name=dtl->line_data="reinhard jodie";
+	set_virtual_table_value(dtl,&virtual_light_profile_tables);
+
+	dtl->entity_name=dtl->line_data="reinhard extended";
+	set_virtual_table_value(dtl,&virtual_light_profile_tables);
+
+	dtl->entity_name=dtl->line_data="piecewise";
+	set_virtual_table_value(dtl,&virtual_light_profile_tables);
+
+	dtl->entity_name=dtl->line_data="piecewise rgb";
 	set_virtual_table_value(dtl,&virtual_light_profile_tables);
 }
 
@@ -124,7 +151,13 @@ void light_profile:: parse_all()
 	if (cf_exists_full("lighting_profiles.tbl", CF_TYPE_TABLES)){
 		light_profile::parse_file("lighting_profiles.tbl");
 	}
+	else{
+		add_default_default();
+	}
 	parse_modular_table("*-ltp.tbm", light_profile::parse_file);
+	if(virtual_light_profile_tables.empty()){
+		add_default_default();
+	}
 }
 
 //Handle an individual file.
@@ -179,7 +212,7 @@ void light_profile::parse_profile(const char *blame)
 	while(parse_nextline(blame,&profile_name)){}
 	//Nextline returns true whenever it finds a next line, if it returns false we're /
 	//  done and will yeild back to the file for section checking and stuff
-	
+
 }
 
 //Returns true if it processed at least one line
@@ -207,26 +240,27 @@ bool light_profile::parse_nextline(const char *blame, SCP_string *const profile_
 
 //Using maps because otherwise I'm terrified of how long it'll take for my weapon tbms to load
 void light_profile::set_virtual_table_value(table_line* line, std::map<SCP_string, std::map<SCP_string,om_table_line>>* set){
-
+	auto n = line->entity_name;
+	SCP_tolower(n);
 	//these bools are figured here because the conditionlines were getting ugly to my eyes
-	 bool entity_exists = (set->find(line->entity_name)==set->end());
+	 bool entity_exists = (set->find(n)==set->end());
 
 	 bool line_exists = (entity_exists &&
-	 	(*set)[line->entity_name].find(line->value_name) == (*set)[line->entity_name].end());
+	 	(*set)[n].find(line->value_name) == (*set)[n].end());
 
 	 if(!entity_exists){
 		std::map<SCP_string,om_table_line> new_entity;
-		 (*set)[line->entity_name] = new_entity;
+		 (*set)[n] = new_entity;
 	 }
 	 if(!line_exists){
 		 om_table_line new_vt_line;
 		 new_vt_line.line_data = line->line_data;
 		 new_vt_line.blame = line->blame;
 		 new_vt_line.set = true;
-		 (*set)[line->entity_name][line->value_name] = new_vt_line;
+		 (*set)[n][line->value_name] = new_vt_line;
 	 }
 	 else{
-		 auto& vtline =	 (*set)[line->entity_name][line->value_name];
+		 auto& vtline =	 (*set)[n][line->value_name];
 		 vtline.line_data = line->line_data;
 		 vtline.blame = line->blame;
 		 vtline.set = true;
@@ -308,37 +342,51 @@ bool light_profile::virtual_table_value_is_set(SCP_string *const keyname, std::m
 }
 
 light_profile*  light_profile_manager::find_by_name(SCP_string *name){
-	for(auto& lp : light_profiles)
+	SCP_string target = *name;
+	SCP_tolower(target);
+	for(light_profile& lp : light_profiles)
 	{
-		if(lp.name == *name){
+		if(lp.name == target){
 			return &lp;
 		}
 	}
 	return nullptr;
 }
-
+light_profile*  light_profile_manager::at(int i){
+	if( i<0 || i>=light_profiles.size()){
+		Error(LOCATION,"Invalid light profile index requested.");
+		return nullptr;
+	}
+	return &light_profiles[i];
+}
 void light_profile_manager::activate(int i){
-	Assert(i>=0 && i<light_profiles.size());
+	if( i<0 || i>=light_profiles.size()){
+		Error(LOCATION,"Invalid light profile index activated.");
+	}
 	activate(&light_profiles[i]);
 }
 void light_profile_manager::activate(SCP_string* name){
-	auto& p = *find_by_name(name);
-	if(&p != nullptr){
-		activate(&p);
+	auto *p = find_by_name(name);
+	if(p == nullptr){
+		Error(LOCATION,"Invalid light profile name activated");
 	}
-
+	else
+		activate(p);
 }
+
 void light_profile_manager::activate(light_profile* base){
 	current_light_profile.name = base->name;
 	current_light_profile.tonemapper = base->tonemapper;
 }
 void light_profile_manager::activate_default_profile(){
-	assert(!light_profiles.empty());
-	light_profile *base = &light_profiles[0];
-	for(auto & lp : light_profiles){
-		if(lp.name == default_light_profile_name){
-			base = &lp;
-		}
+	if(light_profiles.empty()){
+		Error(LOCATION,"No light profiles available, what happened to the defaults?");
+	}
+	auto *base = find_by_name(&default_light_profile_name);
+
+	if (base==nullptr) {
+		Warning(LOCATION,"Couldn't find default lighting profile, falling back to first profile.");
+		base = at(0);
 	}
 	activate(base);
 }
