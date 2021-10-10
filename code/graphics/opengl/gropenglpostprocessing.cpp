@@ -75,7 +75,7 @@ void opengl_post_pass_tonemap()
 
 	opengl_set_generic_uniform_data<graphics::generic_data::tonemapping_data>(
 		[](graphics::generic_data::tonemapping_data* data) { data->exposure = 4.0f;
-		data->tonemapper = light_profile::current_tonemapper();
+		data->tonemapper = light_profile_manager::current_tonemapper();
 		data->toeS = PPC_toeS;
 		data->toeL = PPC_toeL;
 		data->shoulderS = PPC_shoulderS;

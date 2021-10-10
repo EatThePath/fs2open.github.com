@@ -7,6 +7,7 @@
 #include "parse/parselo.h"
 #include <algorithm>
 #include <map>
+#include <string>
 
 
 SCP_vector<light_profile> light_profiles;
@@ -27,34 +28,6 @@ SCP_string default_light_profile_name = "default";
 ;			ACTUALLY JOKES IT'S TRUE AFTER ALL disregrard everything in this block I need to rethink.
 ;		So I need to either make it true for this case or use a distinct marker character.
 */
-light_profile* light_profile::find_by_name(SCP_string *name){
-	for(auto& lp : light_profiles)
-	{
-		if(lp.name == *name){
-			return &lp;
-		}
-	}
-	return nullptr;
-}
-
-void activate_profile(light_profile* base){
-	current_light_profile.name = base->name;
-	current_light_profile.tonemapper = base->tonemapper;
-}
-void activate_default_profile(){
-	assert(!light_profiles.empty());
-	light_profile *base = &light_profiles[0];
-	for(auto & lp : light_profiles){
-		if(lp.name == default_light_profile_name){
-			base = &lp;
-		}
-	}
-	activate_profile(base);
-}
-
-int light_profile::current_tonemapper(){
-	return current_light_profile.tonemapper;
-}
 
 void light_profile::reset(){
     exposure = 4.0f;
@@ -102,13 +75,33 @@ void light_profile::load_profiles(){
 	parse_init();
 	parse_all();
 	build_real_tables();
-	activate_default_profile();
+	light_profile_manager::activate_default_profile();
 }
 //This builds the dictionary of line names that the table will want to parse
 //This is stand-in for eventually using the parse-items infrastructure
 void light_profile:: parse_init(){
 	light_profile_value_names.clear();
 	light_profile_value_names.push_back("+Tonemapper:");
+	light_profile_value_names.push_back("+exposure:");
+	light_profile_value_names.push_back("+static light factor:");
+	light_profile_value_names.push_back("+static tube factor:");
+	light_profile_value_names.push_back("+static point factor:");
+	light_profile_value_names.push_back("+PPC toeS:");
+	light_profile_value_names.push_back("+PPC toeL:");
+	light_profile_value_names.push_back("+PPC shoulderS:");
+	light_profile_value_names.push_back("+PPC shoulderL:");
+	light_profile_value_names.push_back("+PPC shoulderA:");
+	light_profile_value_names.push_back("+glow brightness factor:");
+	light_profile_value_names.push_back("+vfx brightness factor:");
+	light_profile_value_names.push_back("+ambient brightness factor:");
+	light_profile_value_names.push_back("+ambient brigthness floor:");
+	light_profile_value_names.push_back("+sun brightness factor:");
+	light_profile_value_names.push_back("+point brightness factor:");
+	light_profile_value_names.push_back("+tube brightness factor:");
+	light_profile_value_names.push_back("+missile radius factor:");
+	light_profile_value_names.push_back("+laser radius factor:");
+	light_profile_value_names.push_back("+other point radius factor:");
+	light_profile_value_names.push_back("+tube radius factor:");
 	add_default_default();
 }
 
@@ -286,6 +279,16 @@ void light_profile::build_real_tables(){
 				tn = tnm_Aces_Approx;
 			else if((buffer=="uncharted") ||( buffer=="uncharted 2"))
 				tn = tnm_Uncharted;
+			else if(buffer=="cineon")
+				tn =tnm_Cineon;
+			else if(buffer=="reinhard jodie")
+				tn =tnm_Reinhard_Jodie;
+			else if(buffer=="reinhard extended")
+				tn =tnm_Reinhard_Extended;
+			else if(buffer=="piecewise")
+				tn = tnm_PPC;
+			else if(buffer=="piecewise rgb")
+				tn = tnm_PPC_RGB;
 			else{
 				//error goes here
 			}
@@ -302,4 +305,57 @@ bool light_profile::virtual_table_value_is_set(SCP_string *const keyname, std::m
 		return false;
 	}
 	return vtable->at(*keyname).set;
+}
+
+light_profile*  light_profile_manager::find_by_name(SCP_string *name){
+	for(auto& lp : light_profiles)
+	{
+		if(lp.name == *name){
+			return &lp;
+		}
+	}
+	return nullptr;
+}
+
+void light_profile_manager::activate(int i){
+	Assert(i>=0 && i<light_profiles.size());
+	activate(&light_profiles[i]);
+}
+void light_profile_manager::activate(SCP_string* name){
+	auto& p = *find_by_name(name);
+	if(&p != nullptr){
+		activate(&p);
+	}
+
+}
+void light_profile_manager::activate(light_profile* base){
+	current_light_profile.name = base->name;
+	current_light_profile.tonemapper = base->tonemapper;
+}
+void light_profile_manager::activate_default_profile(){
+	assert(!light_profiles.empty());
+	light_profile *base = &light_profiles[0];
+	for(auto & lp : light_profiles){
+		if(lp.name == default_light_profile_name){
+			base = &lp;
+		}
+	}
+	activate(base);
+}
+
+int light_profile_manager::current_tonemapper(){
+	return current_light_profile.tonemapper;
+}
+SCP_string light_profile_manager::current_name(){
+	return current_light_profile.name;
+}
+light_profile saved_light_profile;
+void light_profile_manager::save_current(){
+	saved_light_profile = current_light_profile;
+}
+void light_profile_manager::restore_saved(){
+	current_light_profile = saved_light_profile;
+}
+int light_profile_manager::count(){
+	return light_profiles.size();
 }

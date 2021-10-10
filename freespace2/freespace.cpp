@@ -4372,7 +4372,7 @@ void screenshot_premute(const char* name_base,const char* name_suffix, int mappe
 	int original_tone = tonemapper_selection;
 	SCP_string filename = SCP_string(name_base);
 	filename.append(name_suffix);
-	tonemapper_selection = mapper;	
+	//tonemapper_selection = mapper;	
 	 
 	gr_clear();
 	partial_light_reset();
@@ -4530,10 +4530,10 @@ int game_poll()
 
 			break;
 
-		case KEY_DEBUGGED + KEY_P:			
-			break;			
+		case KEY_DEBUGGED + KEY_P:
+			break;
 
-		case KEY_PRINT_SCRN: 
+		case KEY_PRINT_SCRN:
 			{
 				static int counter = os_config_read_uint(nullptr, "ScreenshotNum", 0);
 				char tmp_name[MAX_FILENAME_LEN];
@@ -4543,18 +4543,45 @@ int game_poll()
 				// we could probably go with .3 here for 1,000 shots but people really need to clean out
 				// their directories better than that so it's 100 for now.
 				sprintf( tmp_name, NOX("screen%.6i"), counter );
-		
+
 				mprintf(( "Dumping screen to '%s'\n", tmp_name ));
 				sprintf( tmp_name, NOX("screen%.6i"), counter );
 				gr_print_screen(tmp_name);
+				counter++;
+				if (counter > 999999)
+				{
+					//This should pop up a dialogue or something ingame.
+					Warning(LOCATION, "Screenshot count has reached max of 999999. Resetting to 0.");
+					counter = 0;
+				}
 
-				screenshot_premute(tmp_name, "li", 0);
-				screenshot_premute(tmp_name, "uc", 1);
-				screenshot_premute(tmp_name, "ac", 2);
-				screenshot_premute(tmp_name, "aa", 3);
-				screenshot_premute(tmp_name, "ci", 4);
-				screenshot_premute(tmp_name, "rj", 5);
-				screenshot_premute(tmp_name, "re", 6);
+				game_start_time();
+				os_config_write_uint(nullptr, "ScreenshotNum", counter);
+			}
+			k = 0;
+			break;
+
+		case KEY_SHIFTED | KEY_PRINT_SCRN:
+			{
+				static int counter = os_config_read_uint(nullptr, "ScreenshotNum", 0);
+				char tmp_name[MAX_FILENAME_LEN];
+
+				game_stop_time();
+				// we could probably go with .3 here for 1,000 shots but people really need to clean out
+				// their directories better than that so it's 100 for now.
+				sprintf( tmp_name, NOX("screen%.6i"), counter );
+
+				mprintf(( "Dumping screen to '%s'\n", tmp_name ));
+				sprintf( tmp_name, NOX("screen%.6i"), counter );
+				light_profile_manager::save_current();
+				for(int i = 0;i<light_profile_manager::count();i++ ){
+					//light_profile_manage
+					light_profile_manager::activate(i);
+					screenshot_premute(tmp_name, light_profile_manager::current_name().c_str(), 0);
+
+				}
+				light_profile_manager::restore_saved();
+/*
 				//defaults
 				PPC_toeS = 0.5;
 				PPC_toeL = 0.5;
@@ -4578,7 +4605,7 @@ int game_poll()
 				PPC_shoulderL = 0.24f;
 				PPC_shoulderA = 5.8f;
 				screenshot_premute(tmp_name, "p3", 7);
-				screenshot_premute(tmp_name, "r3", 8);
+				screenshot_premute(tmp_name, "r3", 8);*/
 				counter++;
 				if (counter > 999999)
 				{
@@ -4590,10 +4617,8 @@ int game_poll()
 				game_start_time();
 				os_config_write_uint(nullptr, "ScreenshotNum", counter);
 			}
-
 			k = 0;
 			break;
-
 		case KEY_SHIFTED | KEY_ENTER: {
 
 #if !defined(NDEBUG)

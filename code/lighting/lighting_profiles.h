@@ -39,7 +39,6 @@ struct om_table_line{
 	SCP_string blame;
 	bool set = false;
 };
-
 class light_profile{
 public:
 	static void parse_init();
@@ -84,5 +83,20 @@ public:
 	static light_profile* find_by_name(SCP_string* name);
 	static void add_default_default();
 	static void load_profiles();
+};
+
+class light_profile_manager{
+	public:
+	static void save_current();
+	static void restore_saved();
+	static void activate(int i);
+	static void activate(SCP_string* name);
+	static void activate(light_profile* base);
+	static int count();
+	static light_profile* at(int i);
+	static light_profile* at(SCP_string* name);
+	static light_profile* find_by_name(SCP_string *name);
+	static void activate_default_profile();
 	static int current_tonemapper();
+	static SCP_string current_name();
 };
