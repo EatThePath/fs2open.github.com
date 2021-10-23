@@ -42,7 +42,7 @@
 
 #define MAX_WINGS				75
 
-#define MAX_SHIPS_PER_WING			6
+#define MAX_SHIPS_PER_WING			60
 
 #define MAX_STARTING_WINGS			3	// number of wings player can start a mission with
 #define MAX_SQUADRON_WINGS			5	// number of wings in squadron (displayed on HUD)
