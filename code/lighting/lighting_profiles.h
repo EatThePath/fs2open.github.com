@@ -60,8 +60,22 @@ public:
 	SCP_string name;
     TonemapperAlgorithm tonemapper;
 	piecewise_power_curve_values ppc_values;
+
 	float exposure;
 
+	float directional_intensity_factor;
+	float point_intensity_factor;
+	float cone_intensity_factor;
+    float tube_intensity_factor;
+
+	float point_radius_factor;
+	float cone_radius_factor;
+    float tube_radius_factor;
+
+	float ambient_factor;
+	float ambient_modifier;
+	float ambient_floor;
+	float emissive_strength;
     void reset();
 
 private:

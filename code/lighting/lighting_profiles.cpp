@@ -29,6 +29,19 @@ void lighting_profile::reset()
     ppc_values.shoulder_angle = 0.1f;
 
 	exposure = 4.0f;
+
+	directional_intensity_factor = 1.0f;
+	point_intensity_factor = 1.0f;
+	cone_intensity_factor = 1.0f;
+    tube_intensity_factor = 1.0f;
+
+	point_radius_factor = 1.0f;
+	cone_radius_factor = 1.0f;
+    tube_radius_factor = 1.0f;
+
+ 	ambient_factor = 1.0f;
+	ambient_modifier = 0.0f;
+	ambient_floor = 0.0f;
 }
 
 TonemapperAlgorithm lighting_profile::name_to_tonemapper(SCP_string &name)
