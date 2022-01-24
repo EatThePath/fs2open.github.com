@@ -44,6 +44,8 @@ struct piecewise_power_curve_intermediates{
 
 class lighting_profile{
 public:
+	static lighting_profile* current();
+
 	static enum TonemapperAlgorithm name_to_tonemapper(SCP_string &name);
 	static void load_profiles();
 	static TonemapperAlgorithm current_tonemapper();

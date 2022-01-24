@@ -214,7 +214,9 @@ void lighting_profile::lab_set_ppc(piecewise_power_curve_values ppcin ){
 	default_profile.ppc_values = ppcin;
 
 }
-
+lighting_profile* lighting_profile::current(){
+	return &default_profile;
+}
 piecewise_power_curve_values lighting_profile::lab_get_ppc(){
 	return default_profile.ppc_values;
 }
