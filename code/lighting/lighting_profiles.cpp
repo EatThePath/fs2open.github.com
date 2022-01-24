@@ -123,6 +123,17 @@ void lighting_profile::parse_default_section()
 		keep_going |= optional_parse_into_float("$Ambient Admustment:",&default_profile.ambient_modifier);
 		keep_going |= optional_parse_into_float("$Ambient Minimum:",&default_profile.ambient_floor);
 
+		keep_going |= optional_parse_into_float("$Sun Intensity Factor:",&default_profile.directional_intensity_factor);
+
+		keep_going |= optional_parse_into_float("$Tube Radius Factor:",&default_profile.tube_radius_factor);
+		keep_going |= optional_parse_into_float("$Tube Intensity Factor:",&default_profile.tube_intensity_factor);
+
+		keep_going |= optional_parse_into_float("$Point Radius Factor:",&default_profile.point_radius_factor);
+		keep_going |= optional_parse_into_float("$Point Intensity Factor:",&default_profile.point_intensity_factor);
+
+		keep_going |= optional_parse_into_float("$Cone Radius Factor:",&default_profile.cone_radius_factor);
+		keep_going |= optional_parse_into_float("$Cone Intensity Factor:",&default_profile.cone_intensity_factor);
+
 		//TODO: Handle case when there's no line matched but we haven't hit an #end
 		Assert(keep_going);
 	}

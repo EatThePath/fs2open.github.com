@@ -13,6 +13,7 @@
 #include "graphics/util/UniformBuffer.h"
 #include "graphics/util/uniform_structs.h"
 #include "lighting/lighting.h"
+#include "lighting/lighting_profiles.h"
 #include "mission/mission_flags.h"
 #include "mission/missionparse.h"
 #include "nebula/neb.h"
@@ -156,7 +157,7 @@ void gr_opengl_deferred_lighting_finish()
 
 		header->invScreenWidth = 1.0f / gr_screen.max_w;
 		header->invScreenHeight = 1.0f / gr_screen.max_h;
-
+		auto* lp = lighting_profile::current();
 		// Only the first directional light uses shaders so we need to know when we already saw that light
 		bool first_directional = true;
 		for (auto& l : Lights) {
@@ -177,6 +178,10 @@ void gr_opengl_deferred_lighting_finish()
 			light_data->diffuseLightColor = diffuse;
 			light_data->specLightColor = spec;
 
+			light_data->scale.xyz.x =1.0f;
+			light_data->scale.xyz.y =1.0f;
+			light_data->scale.xyz.z =1.0f;
+			light_data->lightRadius =1.0f;
 			// Set a default value for all lights. Only the first directional light will change this.
 			light_data->enable_shadows = false;
 
@@ -198,7 +203,8 @@ void gr_opengl_deferred_lighting_finish()
 				light_data->lightDir.xyz.y = view_dir.xyzw.y;
 				light_data->lightDir.xyz.z = view_dir.xyzw.z;
 
-				vm_vec_scale(&light_data->specLightColor, static_light_factor);
+				vm_vec_scale(&light_data->diffuseLightColor, lp->directional_intensity_factor);
+				vm_vec_scale(&light_data->specLightColor, lp->directional_intensity_factor);
 
 				first_directional = false;
 				break;
@@ -207,17 +213,23 @@ void gr_opengl_deferred_lighting_finish()
 				light_data->coneAngle = l.cone_angle;
 				light_data->coneInnerAngle = l.cone_inner_angle;
 				light_data->coneDir = l.vec2;
-				FALLTHROUGH;
-			case Light_Type::Point:
-				vm_vec_scale(&light_data->specLightColor, static_point_factor);
 
-				light_data->lightRadius = MAX(l.rada, l.radb) * 1.25f;
-				light_data->scale.xyz.x = MAX(l.rada, l.radb) * 1.28f;
-				light_data->scale.xyz.y = MAX(l.rada, l.radb) * 1.28f;
-				light_data->scale.xyz.z = MAX(l.rada, l.radb) * 1.28f;
+				vm_vec_scale(&light_data->diffuseLightColor, lp->cone_intensity_factor);
+				vm_vec_scale(&light_data->specLightColor, lp->cone_intensity_factor);
+
+				light_data->lightRadius = MAX(l.rada, l.radb) * 1.25f*lp->cone_radius_factor;
+				vm_vec_scale(&light_data->scale, lp->cone_radius_factor);
+			case Light_Type::Point:
+
+				vm_vec_scale(&light_data->diffuseLightColor, lp->point_intensity_factor);
+				vm_vec_scale(&light_data->specLightColor,  lp->point_intensity_factor);
+
+				light_data->lightRadius = MAX(l.rada, l.radb) * 1.25f * lp->point_radius_factor;
+
+				vm_vec_scale(&light_data->scale, MAX(l.rada, l.radb) * 1.28f*lp->point_radius_factor);
 				break;
 			case Light_Type::Tube: {
-				light_data->lightRadius = l.radb * 1.5f;
+				light_data->lightRadius = l.radb * 1.5f * lp->tube_radius_factor;
 				light_data->lightType = LT_TUBE;
 
 				vec3d a;
@@ -228,11 +240,12 @@ void gr_opengl_deferred_lighting_finish()
 				//origin we must extend it here. Later the position will be adjusted as well.
 				length += light_data->lightRadius * 2.0f;
 
-				light_data->scale.xyz.x = l.radb * 1.53f;
-				light_data->scale.xyz.y = l.radb * 1.53f;
+				light_data->scale.xyz.x = l.radb * 1.53f * lp->tube_radius_factor;
+				light_data->scale.xyz.y = l.radb * 1.53f * lp->tube_radius_factor;
 				light_data->scale.xyz.z = length;
 
-				vm_vec_scale(&light_data->specLightColor, static_tube_factor);
+				vm_vec_scale(&light_data->specLightColor, lp->tube_intensity_factor);
+				vm_vec_scale(&light_data->diffuseLightColor, lp->tube_intensity_factor);
 				break;
 			}
 			}
