@@ -139,7 +139,7 @@ void set_emissive_flag(Checkbox* caller) {
 void set_ambient_factor(Slider* caller) {
 	auto value = caller->GetSliderValue();
 
-	getLabManager()->Renderer->setAmbientFactor(fl2i(value));
+	getLabManager()->Renderer->setAmbientFactor(value);
 }
 
 void set_static_light_factor(Slider* caller) {
@@ -289,8 +289,9 @@ void RenderOptions::open(Button* /*caller*/) {
 	cbp = (Checkbox*)dialogWindow->AddChild(new Checkbox("Render with emissive lighting", 2, y, set_emissive_flag));
 	y += cbp->GetHeight() + 2;
 
-	auto ambient_sldr = new Slider("Ambient Factor", 0, 128, 0, y + 2, set_ambient_factor, dialogWindow->GetWidth());
-	ambient_sldr->SetSliderValue((float)Cmdline_ambient_factor);
+	auto* lp = lighting_profile::current();
+	auto ambient_sldr = new Slider("Ambient Factor", 0, 1.0f, 0, y + 2, set_ambient_factor, dialogWindow->GetWidth());
+	ambient_sldr->SetSliderValue(lp->ambient_factor);
 	dialogWindow->AddChild(ambient_sldr);
 	y += ambient_sldr->GetHeight() + 2;
 

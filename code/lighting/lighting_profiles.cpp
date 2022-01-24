@@ -118,6 +118,11 @@ void lighting_profile::parse_default_section()
 		keep_going |= optional_parse_into_float("$PPC Shoulder Strength:",&default_profile.ppc_values.shoulder_strength);
 		keep_going |= optional_parse_into_float("$PPC Shoulder Angle:",&default_profile.ppc_values.shoulder_angle);
 		keep_going |= optional_parse_into_float("$Exposure:",&default_profile.exposure);
+
+		keep_going |= optional_parse_into_float("$Ambient Factor:",&default_profile.ambient_factor);
+		keep_going |= optional_parse_into_float("$Ambient Admustment:",&default_profile.ambient_modifier);
+		keep_going |= optional_parse_into_float("$Ambient Minimum:",&default_profile.ambient_floor);
+
 		//TODO: Handle case when there's no line matched but we haven't hit an #end
 		Assert(keep_going);
 	}

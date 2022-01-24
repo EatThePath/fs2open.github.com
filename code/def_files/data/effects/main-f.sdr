@@ -188,7 +188,7 @@ void GetLightInfo(int i, out vec3 lightDir, out float attenuation)
 vec3 CalculateLighting(vec3 normal, vec3 diffuseMaterial, vec3 specularMaterial, float gloss, float fresnel, float shadow, float aoFactor)
 {
 	vec3 eyeDir = vec3(normalize(-vertIn.position).xyz);
-	vec3 lightAmbient = (emissionFactor + ambientFactor * ambientFactor) * aoFactor; // ambientFactor^2 due to legacy OpenGL compatibility behavior
+	vec3 lightAmbient = ambientFactor * aoFactor;
 	vec3 lightDiffuse = vec3(0.0, 0.0, 0.0);
 	vec3 lightSpecular = vec3(0.0, 0.0, 0.0);
 	#pragma optionNV unroll all
@@ -328,7 +328,7 @@ void main()
 #ifdef FLAG_DEFERRED
  #ifdef FLAG_LIGHT
 	// Ambient lighting still needs to be done since that counts as an "emissive" color
-	vec3 lightAmbient = (emissionFactor + ambientFactor * ambientFactor) * aoFactors.x; // ambientFactor^2 due to legacy OpenGL compatibility behavior
+	vec3 lightAmbient = ambientFactor * aoFactors.x;
 	emissiveColor.rgb += baseColor.rgb * lightAmbient;
  #else
   #ifdef FLAG_SPEC_MAP

@@ -6,6 +6,8 @@
 #include "light.h"
 #include "globalincs/systemvars.h"
 #include "shadows.h"
+#include "lighting/lighting_profiles.h"
+#include <algorithm>
 
 namespace {
 void scale_matrix(matrix4& mat, const vec3d& scale) {
@@ -74,6 +76,7 @@ void convert_model_material(model_uniform_data* data_out,
 	if (shader_flags & SDR_FLAG_MODEL_LIGHT) {
 		int num_lights = MIN(Num_active_gr_lights, (int)graphics::MAX_UNIFORM_LIGHTS);
 		data_out->n_lights = num_lights;
+		auto* lp = lighting_profile::current();
 
 		gr_lighting_fill_uniforms(data_out->lights, sizeof(data_out->lights));
 
@@ -81,13 +84,13 @@ void convert_model_material(model_uniform_data* data_out,
 		data_out->diffuseFactor.xyz.x = gr_light_color[0] * light_factor;
 		data_out->diffuseFactor.xyz.y = gr_light_color[1] * light_factor;
 		data_out->diffuseFactor.xyz.z = gr_light_color[2] * light_factor;
-		data_out->ambientFactor.xyz.x = gr_light_ambient[0] + gr_user_ambient;
-		data_out->ambientFactor.xyz.y = gr_light_ambient[1] + gr_user_ambient;
-		data_out->ambientFactor.xyz.z = gr_light_ambient[2] + gr_user_ambient;
+		data_out->ambientFactor.xyz.x = std::max((gr_light_ambient[0] + lp->ambient_modifier)*lp->ambient_factor,lp->ambient_floor);
+		data_out->ambientFactor.xyz.y = std::max((gr_light_ambient[1] + lp->ambient_modifier)*lp->ambient_factor,lp->ambient_floor);
+		data_out->ambientFactor.xyz.z = std::max((gr_light_ambient[2] + lp->ambient_modifier)*lp->ambient_factor,lp->ambient_floor);
 
-		CLAMP(data_out->ambientFactor.xyz.x, 0.02f, 1.0f);
-		CLAMP(data_out->ambientFactor.xyz.y, 0.02f, 1.0f);
-		CLAMP(data_out->ambientFactor.xyz.z, 0.02f, 1.0f);
+		data_out->ambientFactor.xyz.x=std::max(data_out->ambientFactor.xyz.x, 0.0001f);
+		data_out->ambientFactor.xyz.y=std::max(data_out->ambientFactor.xyz.y, 0.0001f);
+		data_out->ambientFactor.xyz.z=std::max(data_out->ambientFactor.xyz.z, 0.0001f);
 
 		if (material.get_light_factor() > 0.25f && Cmdline_emissive) {
 			data_out->emissionFactor.xyz.x = gr_light_emission[0];

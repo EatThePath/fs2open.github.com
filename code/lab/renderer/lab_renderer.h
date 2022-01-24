@@ -136,11 +136,9 @@ public:
 
 	void setRenderFlag(LabRenderFlag flag, bool value) { renderFlags.set(flag, value); }
 
-	int setAmbientFactor(int factor) { 
+	int setAmbientFactor(float factor) {
+		lighting_profile::current()->ambient_factor = factor; 
 		ambientFactor = factor; 
-		Cmdline_ambient_factor = factor;
-		gr_calculate_ambient_factor();
-
 		return factor; 
 	}
 
