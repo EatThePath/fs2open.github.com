@@ -219,6 +219,7 @@ void gr_opengl_deferred_lighting_finish()
 
 				light_data->lightRadius = MAX(l.rada, l.radb) * 1.25f*lp->cone_radius_factor;
 				vm_vec_scale(&light_data->scale, lp->cone_radius_factor);
+				break;
 			case Light_Type::Point:
 
 				vm_vec_scale(&light_data->diffuseLightColor, lp->point_intensity_factor);
