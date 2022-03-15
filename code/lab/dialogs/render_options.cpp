@@ -136,16 +136,42 @@ void set_emissive_flag(Checkbox* caller) {
 	getLabManager()->Renderer->setRenderFlag(LabRenderFlag::ShowEmissiveLighting, !value);
 }
 
+
+
 void set_ambient_factor(Slider* caller) {
 	auto value = caller->GetSliderValue();
 
 	getLabManager()->Renderer->setAmbientFactor(value);
 }
 
+void set_ambient_floor(Slider* caller) {
+	auto value = caller->GetSliderValue();
+
+	getLabManager()->Renderer->setAmbientFloor(value);
+}
+
+void set_ambient_adjust(Slider* caller) {
+	auto value = caller->GetSliderValue();
+
+	getLabManager()->Renderer->setAmbientAdjust(value);
+}
+
 void set_static_light_factor(Slider* caller) {
 	auto value = caller->GetSliderValue();
 
 	getLabManager()->Renderer->setDirectionalFactor(value);
+}
+
+void set_point_light_factor(Slider* caller) {
+	auto value = caller->GetSliderValue();
+
+	getLabManager()->Renderer->setPointFactor(value);
+}
+
+void set_point_light_size(Slider* caller) {
+	auto value = caller->GetSliderValue();
+
+	getLabManager()->Renderer->setPointRadius(value);
 }
 
 void set_bloom(Slider* caller) {
@@ -290,15 +316,39 @@ void RenderOptions::open(Button* /*caller*/) {
 	y += cbp->GetHeight() + 2;
 
 	auto* lp = lighting_profile::current();
-	auto ambient_sldr = new Slider("Ambient Factor", 0, 1.0f, 0, y + 2, set_ambient_factor, dialogWindow->GetWidth());
+
+
+
+	auto ambient_sldr = new Slider("Ambient Factor", 0.0f, 10.0f, 0, y + 2, set_ambient_factor, dialogWindow->GetWidth());
 	ambient_sldr->SetSliderValue(lp->ambient_factor);
 	dialogWindow->AddChild(ambient_sldr);
 	y += ambient_sldr->GetHeight() + 2;
 
-	auto direct_sldr = new Slider("Direct. Lights", 0.0f, 2.0f, 0, y + 2, set_static_light_factor, dialogWindow->GetWidth());
-	direct_sldr->SetSliderValue(static_light_factor);
+	auto ambient_floor_sldr = new Slider("Minimum Ambient", 0.0f, 1.0f, 0, y + 2, set_ambient_floor, dialogWindow->GetWidth());
+	ambient_floor_sldr->SetSliderValue(lp->ambient_floor);
+	dialogWindow->AddChild(ambient_floor_sldr);
+	y += ambient_floor_sldr->GetHeight() + 2;
+
+	auto ambient_adjust_sldr = new Slider("Ambient adjustment", -1.0f, 1.0f, 0, y + 2, set_ambient_adjust, dialogWindow->GetWidth());
+	ambient_floor_sldr->SetSliderValue(lp->ambient_modifier);
+	dialogWindow->AddChild(ambient_adjust_sldr);
+	y += ambient_adjust_sldr->GetHeight() + 2;
+
+
+	auto direct_sldr = new Slider("Direct. Lights", 0.0f, 10.0f, 0, y + 2, set_static_light_factor, dialogWindow->GetWidth());
+	direct_sldr->SetSliderValue(lp->directional_intensity_factor);
 	dialogWindow->AddChild(direct_sldr);
 	y += direct_sldr->GetHeight() + 2;
+
+	auto point_intens_sldr = new Slider("Point Intensity", 0.0f, 10.0f, 0, y + 2, set_point_light_factor, dialogWindow->GetWidth());
+	point_intens_sldr->SetSliderValue(lp->point_intensity_factor);
+	dialogWindow->AddChild(point_intens_sldr);
+	y += point_intens_sldr->GetHeight() + 2;
+
+	auto point_rad_sldr = new Slider("Point Radius", 0.0f, 10.0f, 0, y + 2, set_point_light_size, dialogWindow->GetWidth());
+	point_rad_sldr->SetSliderValue(lp->point_radius_factor);
+	dialogWindow->AddChild(point_rad_sldr);
+	y += point_rad_sldr->GetHeight() + 2;
 
 	auto bloom_sldr = new Slider("Bloom", 0, 200, 0, y + 2, set_bloom, dialogWindow->GetWidth());
 	bloom_sldr->SetSliderValue((float)gr_bloom_intensity());

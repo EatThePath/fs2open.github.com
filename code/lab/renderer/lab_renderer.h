@@ -71,8 +71,6 @@ class LabRenderer {
 public:
 	LabRenderer() {
 		bloomLevel = gr_bloom_intensity();
-		ambientFactor = Cmdline_ambient_factor;
-		directionalFactor = static_light_factor;
 		textureQuality = TextureQuality::Maximum;
 		cameraDistance = 100.0f;
 		currentTeamColor = "<none>";
@@ -136,22 +134,42 @@ public:
 
 	void setRenderFlag(LabRenderFlag flag, bool value) { renderFlags.set(flag, value); }
 
-	int setAmbientFactor(float factor) {
+
+
+	float setAmbientFactor(float factor) {
 		lighting_profile::current()->ambient_factor = factor; 
-		ambientFactor = factor; 
+		return factor; 
+	}
+
+	float setAmbientFloor(float factor) {
+		lighting_profile::current()->ambient_floor = factor; 
+		return factor; 
+	}
+
+	float setAmbientAdjust(float factor) {
+		lighting_profile::current()->ambient_modifier = factor; 
 		return factor; 
 	}
 
 	float setDirectionalFactor(float factor) { 
-		directionalFactor = factor; 
-		static_light_factor = factor;
+		lighting_profile::current()->directional_intensity_factor = factor; 
 		return factor; 
 	}
 
-	int setBloomLevel(int level) { 
-		bloomLevel = level; 
+	float setPointFactor(float factor) { 
+		lighting_profile::current()->point_intensity_factor = factor; 
+		return factor; 
+	}
+
+	float setPointRadius(float factor) { 
+		lighting_profile::current()->point_radius_factor = factor; 
+		return factor; 
+	}
+
+	int setBloomLevel(int level) {
+		bloomLevel = level;
 		gr_set_bloom_intensity(level);
-		return level; 
+		return level;
 	}
 
 	float setExposureLevel(float level) {
@@ -159,7 +177,7 @@ public:
 		lighting_profile::lab_set_exposure(level);
 		return level;
 	}
-	
+
 	static void setPPCValues(piecewise_power_curve_values ppcv) {
 		lighting_profile::lab_set_ppc(ppcv);
 	}
@@ -175,8 +193,6 @@ public:
 
 private:
 	flagset<LabRenderFlag> renderFlags;
-	int ambientFactor;
-	float directionalFactor;
 	int bloomLevel;
 	float exposureLevel;
 	TextureQuality textureQuality;
