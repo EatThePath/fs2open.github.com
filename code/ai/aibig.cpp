@@ -562,7 +562,7 @@ bool ai_new_maybe_reposition_attack_subsys() {
 	// not in sight, gotta get there
 	vec3d* good_pos = nullptr;
 	// For performance reasons we only recheck once a second, otherwise we reuse the last found target.
-	if (timestamp_elapsed(aip->next_dynamic_path_check_time)) {
+	if (timestamp_elapsed(aip->next_dynamic_path_check_time)) 
 		vec3d tgt2pl = Pl_objp->pos - target_objp->pos;
 		vec3d tgt2subsys = gsubpos - target_objp->pos;
 		float pl_dist = vm_vec_mag(&tgt2pl);
