@@ -309,7 +309,7 @@ void* gr_opengl_map_buffer(gr_buffer_handle handle)
 
 	opengl_bind_buffer_object(handle);
 	return glMapBufferRange(buffer_obj.type, 0, buffer_obj.size,
-	                        GL_MAP_WRITE_BIT | GL_MAP_PERSISTENT_BIT | GL_MAP_FLUSH_EXPLICIT_BIT);
+	                        GL_MAP_WRITE_BIT | GL_MAP_PERSISTENT_BIT | GL_MAP_FLUSH_EXPLICIT_BIT | GL_MAP_INVALIDATE_BUFFER_BIT);
 }
 void gr_opengl_flush_mapped_buffer(gr_buffer_handle handle, size_t offset, size_t size)
 {
