@@ -16,6 +16,7 @@
 #include "wing.h"
 #include "vecmath.h"
 
+#include "parse/sexp/LuaShared.h"
 #include "ship/shiphit.h"
 #include "hud/hudshield.h"
 #include "playerman/player.h"
@@ -1003,6 +1004,27 @@ ADE_FUNC(kill, l_Ship, "[object Killer, vector Hitpos]", "Kills the ship. Set \"
 	ship_hit_kill(victim->objp, killer ? killer->objp : nullptr, hitpos, percent_killed, (killer && victim->sig == killer->sig), true);
 
 	return ADE_RETURN_TRUE;
+}
+
+ADE_FUNC(isVisible, l_Ship, 
+	"[ship viewer]", 
+	"mimics is-Ship-Visible sexp", 
+	"number", "todo")
+{
+	object_h * v1 = nullptr;
+	object_h * v2 = nullptr;
+	if(!ade_get_args(L, "o|o",  l_Ship.GetPtr( &v1 ),l_Ship.GetPtr( &v2 )))
+		return ade_set_error(L, "o","");/*
+	ship_registry_entry(nullptr);
+	ship *vs1 = nullptr;
+	ship *vs2 = nullptr;
+	return shared_is_ship_visible(vs1,vs2);*/
+	ship *viewer_shipp=nullptr;
+	ship *viewed_shipp=nullptr;
+	viewed_shipp = &Ships[v1->objp->instance];
+	if(v2)
+		viewer_shipp = &Ships[v2->objp->instance]; 
+	return ade_set_args(L, "i", shared_is_ship_visible(viewed_shipp,viewer_shipp));
 }
 
 ADE_FUNC(addShipEffect, l_Ship, "string name, number durationMillis", "Activates an effect for this ship. Effect names are defined in Post_processing.tbl, and need to be implemented in the main shader. This functions analogous to the ship-effect sexp. NOTE: only one effect can be active at any time, adding new effects will override effects already in progress.\n", "boolean", "Returns true if the effect was successfully added, false otherwise") {
