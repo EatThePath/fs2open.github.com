@@ -83,6 +83,7 @@
 #include "scripting/scripting.h"
 #include "parse/sexp.h"
 #include "parse/sexp_container.h"
+#include "parse/sexp/LuaShared.h" 
 #include "playerman/player.h"
 #include "render/3d.h"
 #include "ship/afterburner.h"
@@ -7027,6 +7028,7 @@ int sexp_hits_left(int node, bool sim_hull)
 	return percent;
 }
 
+
 /**
  * Determine if ship visible on radar
  * 
@@ -7051,53 +7053,14 @@ int sexp_is_ship_visible(int node)
 	if (n >= 0)
 	{
 		auto viewer_entry = eval_ship(n);
-		if (viewer_entry)
-			viewer_shipp = viewer_entry->shipp;
+		return shared_is_ship_visible(ship_entry->shipp,viewer_entry->shipp);
 	}
 	else
 	{
-		// if the second argument is not supplied, default to the player, per retail
-		if (Game_mode & GM_MULTIPLAYER)
-		{
-			mprintf(("In multiplayer, is-ship-visible must have two arguments!  Defaulting to the first player.\n"));
-
-			// to make allowances for buggy missions (such as retail), just pick the first player
-			// if we actually have no valid players, viewer_shipp will be NULL, but that's ok
-			for (int i = 0; i < MAX_PLAYERS; ++i)
-			{
-				int shipnum = multi_get_player_ship(i);
-				if (shipnum >= 0)
-				{
-					viewer_shipp = &Ships[shipnum];
-					break;
-				}
-			}
-		}
-		else
-			viewer_shipp = Player_ship;
+		return shared_is_ship_visible(ship_entry->shipp,nullptr);
 	}
-
-	// get ship's *radar* visiblity
-	if (viewer_shipp)
-	{
-		if (ship_is_visible_by_team(ship_entry->objp, viewer_shipp))
-		{
-			ship_is_visible = 2;
-		}
-	}
-
-	// only check awacs level if ship is not visible by team
-	if (viewer_shipp && !ship_is_visible) {
-		float awacs_level = awacs_get_level(ship_entry->objp, viewer_shipp);
-		if (awacs_level >= 1.0f) {
-			ship_is_visible = 2;
-		} else if (awacs_level > 0) {
-			ship_is_visible = 1;
-		}
-	}
-
-	return ship_is_visible;
 }
+
 
 /**
  * Determine if a flag is set on this ship

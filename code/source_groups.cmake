@@ -1041,6 +1041,8 @@ add_file_folder("Parse\\\\SEXP"
 	parse/sexp/EngineSEXP.h
 	parse/sexp/LuaSEXP.cpp
 	parse/sexp/LuaSEXP.h
+	parse/sexp/LuaShared.cpp
+	parse/sexp/LuaShared.h
 	parse/sexp/sexp_lookup.cpp
 	parse/sexp/sexp_lookup.h
 	parse/sexp/SEXPParameterExtractor.cpp
