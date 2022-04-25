@@ -17,6 +17,9 @@
 #include "fireball/fireballs.h"
 #include "freespace.h"
 #include "globalincs/linklist.h"
+#include "globalincs/pstypes.h"
+#include "globalincs/vmallocator.h"
+#include "graphics/color.h"
 #include "iff_defs/iff_defs.h"
 #include "io/timer.h"
 #include "jumpnode/jumpnode.h"
@@ -1210,25 +1213,23 @@ void obj_move_all_post(object *objp, float frametime)
 						cast_light = 0;
 					}
 				}
-
-				if ( cast_light )	{
-					weapon_info * wi = &Weapon_info[Weapons[objp->instance].weapon_info_index];
-
-					if ( wi->render_type == WRT_LASER )	{
+				weapon_info* wi = &Weapon_info[Weapons[objp->instance].weapon_info_index];
+				if (cast_light && wi->has_light_radius) {
+					hdr_color* light_color = nullptr;
+					if (!wi->has_custom_light && wi->render_type == WRT_LASER) {
+						//We need to copy the custom light color for to have the intensity, but it can varry.
+						light_color = new hdr_color(&wi->custom_light_color);
 						color c;
-						float r,g,b;
-
 						// get the laser color
 						weapon_get_laser_color(&c, objp);
 
-						r = i2fl(c.red)/255.0f;
-						g = i2fl(c.green)/255.0f;
-						b = i2fl(c.blue)/255.0f;
-
-						light_add_point( &objp->pos, 10.0f, 100.0f, 1.0f, r, g, b);
-					} else {
-						light_add_point( &objp->pos, 10.0f, 20.0f, 1.0f, 1.0f, 1.0f, 1.0f);
-					} 
+						light_color->set_rgb(&c);
+					}
+					else {
+						light_color = new hdr_color(&wi->custom_light_color);
+					}
+					light_add_point(&objp->pos, wi->light_radius, wi->light_radius,light_color);
+					delete light_color;
 				}
 			}
 
