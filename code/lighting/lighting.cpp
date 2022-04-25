@@ -225,8 +225,8 @@ void light_add_point(const vec3d *pos, float r1, float r2, float intensity, floa
 	l.spec_g = spec_g;
 	l.spec_b = spec_b;
 	l.intensity = intensity;
-	l.rada = r1;
-	l.radb = r2;
+	l.rada = r1*1.25f;//This 'moves down' the multiplier from gropengldeferrred one step
+	l.radb = r2*1.25f;//This 'moves down' the multiplier from gropengldeferrred one step
 	l.rada_squared = l.rada*l.rada;
 	l.radb_squared = l.radb*l.radb;
 	l.instance = Num_lights-1;
@@ -269,8 +269,8 @@ void light_add_tube(const vec3d *p0, const vec3d *p1, float r1, float r2, float 
 	l.spec_g = spec_g;
 	l.spec_b = spec_b;
 	l.intensity = intensity;
-	l.rada = r1;
-	l.radb = r2;
+	l.rada = r1*1.5f;//This 'moves down' the multiplier from gropengldeferrred one step
+	l.radb = r2*1.5f;//This 'moves down' the multiplier from gropengldeferrred one step
 	l.rada_squared = l.rada*l.rada;
 	l.radb_squared = l.radb*l.radb;
 	l.instance = Num_lights-1;
@@ -484,8 +484,8 @@ void light_add_cone(const vec3d *pos, const vec3d *dir, float angle, float inner
 	l.spec_g = spec_g;
 	l.spec_b = spec_b;
 	l.intensity = intensity;
-	l.rada = r1;
-	l.radb = r2;
+	l.rada = r1*1.25f;//This 'moves down' the multiplier from gropengldeferrred one step
+	l.radb = r2*1.25f;//This 'moves down' the multiplier from gropengldeferrred one step
 	l.rada_squared = l.rada*l.rada;
 	l.radb_squared = l.radb*l.radb;
 	l.instance = Num_lights-1;
