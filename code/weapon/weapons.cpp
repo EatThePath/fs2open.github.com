@@ -10,6 +10,7 @@
 
 
 #include <algorithm>
+#include <cstddef>
 
 #include "ai/aibig.h"
 #include "asteroid/asteroid.h"
@@ -20,6 +21,7 @@
 #include "freespace.h"
 #include "gamesnd/gamesnd.h"
 #include "globalincs/linklist.h"
+#include "graphics/color.h"
 #include "hud/hud.h"
 #include "hud/hudartillery.h"
 #include "iff_defs/iff_defs.h"
@@ -35,6 +37,8 @@
 #include "object/objcollide.h"
 #include "object/objectdock.h"
 #include "object/objectsnd.h"
+#include "parse/parsehi.h"
+#include "parse/parselo.h"
 #include "scripting/scripting.h"
 #include "particle/particle.h"
 #include "playerman/player.h"
@@ -1155,6 +1159,16 @@ int parse_weapon(int subtype, bool replace, const char *filename)
 	if(optional_string("@Laser Tail Radius:")) {
 		stuff_float(&wip->laser_tail_radius );
 	}
+
+	if (parse_optional_color3i_into("$Custom light color:", &wip->custom_light_color)) {
+		wip->has_custom_light = true;
+	}
+
+	parse_optional_float_into("$Custom light radius:", &wip->light_radius);
+
+	float fbuffer;
+	if (parse_optional_float_into("$Custom light intensity:", &fbuffer))
+		wip->custom_light_color.set_i(fbuffer);
 
 	if (optional_string("$Collision Radius Override:")) {
 		stuff_float(&wip->collision_radius_override);
@@ -2657,6 +2671,12 @@ int parse_weapon(int subtype, bool replace, const char *filename)
 
 		if ( optional_string("+BeamWidth:") )
 			stuff_float(&wip->b_info.beam_width);
+
+		parse_optional_float_into("+Beam Light Width:",&wip->b_info.beam_light_radius);
+
+		parse_optional_bool_into("+Beam Light Flickers:",&wip->b_info.beam_light_flicker);
+
+		parse_optional_bool_into("+Beam Light Multiplies Width:",&wip->b_info.beam_light_as_multiplier);
 
 		if (optional_string("+Beam Flash Particle Effect:")) {
 			wip->flash_impact_weapon_expl_effect = particle::util::parseEffect(wip->name);
@@ -4190,6 +4210,19 @@ void weapon_do_post_parse()
 		// catch a fall back cmeasure index, just in case
 		if ( (first_cmeasure_index < 0) && (wip->wi_flags[Weapon::Info_Flags::Cmeasure]) )
 			first_cmeasure_index = i;
+		//Lasers potentially have color cycling, will be left nullptr to signify the need for a different code path.
+		if( wip->render_type != WRT_LASER && !wip->has_custom_light){
+			wip->custom_light_color.reset();
+			wip->has_custom_light = true;
+		}
+
+		if(wip->has_light_radius && wip->light_radius<0.0f){
+			if(wip->render_type == WRT_LASER)
+				wip->light_radius = DEFAULT_LASER_LIGHT_RADIUS;
+			else if(wip->render_type == WRT_POF)
+				wip->light_radius = DEFAULT_MISSILE_LIGHT_RADIUS;
+		//todo: Handle beam case case
+		}
 	}
 
 	// catch cmeasure fallback
@@ -8700,6 +8733,11 @@ void weapon_info::reset()
 	this->laser_head_radius = 1.0f;
 	this->laser_tail_radius = 1.0f;
 
+	this->has_light_radius = true;
+	this->has_custom_light = false;
+	this->custom_light_color.reset();
+	this->light_radius = -1.0f; //Default has to be set at parse as it depends on type, so use a boundry value for that 
+
 	this->collision_radius_override = -1.0f;
 	this->max_speed = 10.0f;
 	this->acceleration_time = 0.0f;
@@ -8903,6 +8941,9 @@ void weapon_info::reset()
 	this->b_info.range = BEAM_FAR_LENGTH;
 	this->b_info.damage_threshold = 1.0f;
 	this->b_info.beam_width = -1.0f;
+	this->b_info.beam_light_flicker = true;
+	this->b_info.beam_light_as_multiplier = true;
+	this->b_info.beam_light_radius = 25.0f;	
 	this->b_info.flags.reset();
 
 	// type 5 beam stuff
