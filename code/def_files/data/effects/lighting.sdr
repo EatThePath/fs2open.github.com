@@ -22,8 +22,6 @@ vec3 SpecularBlinnPhong(vec3 specColor, vec3 light, vec3 normal, vec3 halfVec, f
 
 vec3 ComputeGGX(vec3 specColor, vec3 diffColor, vec3 light, vec3 normal, vec3 halfVec, vec3 view, float gloss, float fresnelFactor, float dotNL)
 {
-	// metalness term here is a hack to shove a specular based workflow into metallic shaders for backwards compatability.
-	float metalness = length(specColor)/SQRT_3;
 	float roughness = clamp(1.0f - gloss, 0.0f, 1.0f);
 	float alpha = roughness * roughness;
 
@@ -56,9 +54,9 @@ vec3 ComputeGGX(vec3 specColor, vec3 diffColor, vec3 light, vec3 normal, vec3 ha
 	
 	// Diffuse term - Lambertian 
 	vec3 kD = vec3(1.0)-fresnel;
-	kD *= (1.0 - metalness);
-
+	kD *= (vec3(1.0) - specColor);
 	vec3 diffuse = kD * diffColor/PI;
+
 	return (specular + diffuse) * dotNL;
 }
 
