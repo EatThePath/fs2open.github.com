@@ -1,7 +1,8 @@
+//? #version 150
+#include "shadows.sdr" //! #include "shadows.sdr"
+#include "lighting.sdr" //! #include "lighting.sdr"
+#include "gamma.sdr" //! #include "gamma.sdr"
 
-#include "shadows.sdr"
-#include "lighting.sdr"
-#include "gamma.sdr"
 
 #define MAX_LIGHTS 8
 #define LT_DIRECTIONAL		0
@@ -350,18 +351,28 @@ void main()
  #endif
 #endif
 #ifdef FLAG_ENV_MAP
-	vec3 envReflectNM = vertIn.envReflect;
- #ifdef FLAG_NORMAL_MAP
-	envReflectNM += vec3(normalSample, 0.0);
-	envReflectNM = normalize(envReflectNM);
- #endif
-	float mip = (envGloss) ? (1.0 - glossData) * 7.0 : 0.0;
-	vec4 envColour = textureLod(sEnvmap, envReflectNM, mip);
- #ifdef FLAG_HDR
-	envColour.rgb = srgb_to_linear(envColour.rgb);
- #endif
-	envColour.rgb *= (envGloss) ? 1.0 : specColor.a;
-	emissiveColor.rgb += envColour.rgb * FresnelLazarovEnv(specColor.rgb, eyeDir, normal, glossData);
+	mat3 basis = localCoordinates(eyeDir, normal);
+	// cheeky bit of linalg, basis is orthonormal so M^-1 = M^T, 
+	vec3 view_local = eyeDir * basis;
+	float roughness = clamp(1.0f - glossData, 0.0f, 1.0f);
+	float alpha = roughness * roughness;
+	float mip = (envGloss) ? alpha * 100.0 : 0.0;
+	for(int i=0; i<32; ++i) 
+	{
+		vec2 point = POINTS[i];
+		vec3 sample_dir = basis * sampleGGXVNDF(view_local, alpha, point.x, point.y);
+		vec3 light_dir = reflect(eyeDir, sample_dir);
+		vec4 envColour = textureLod(sEnvmap, light_dir, mip);
+		vec3 halfVec = normalize(light_dir + eyeDir);
+		float NdotL = dot(light_dir, normal.xyz);
+		float alphaPrime = roughness + 1.0f;
+		float k = alphaPrime * alphaPrime / 8.0f;
+		vec3 fresnel = mix(specColor.rgb, FresnelSchlick(halfVec, eyeDir, specColor.rgb), specColor.a);
+		float g1vNL = GeometrySchlickGGX(NdotL, k);
+		vec3 lighting = envColour.rgb * fresnel * g1vNL;
+		emissiveColor.rgb += lighting.rgb/32.0;
+	}
+
 #endif
 #ifdef FLAG_GLOW_MAP
 	vec3 glowColor = texture(sGlowmap, vec3(texCoord, float(sGlowmapIndex))).rgb;

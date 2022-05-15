@@ -1,4 +1,4 @@
-
+//? #version 150
 const int LT_DIRECTIONAL	= 0;		// A light like a sun
 const int LT_POINT			= 1;		// A point light, like an explosion
 const int LT_TUBE			= 2;		// A tube light, like a fluorescent light
@@ -8,7 +8,44 @@ const float SPEC_FACTOR_NO_SPEC_MAP		= 0.1;
 const float GLOW_MAP_INTENSITY			= 1.5;
 const float GLOW_MAP_SRGB_MULTIPLIER	= 3.0;
 const float PI = 3.14159f;
-const float SQRT_3 = 1.73205f;
+
+
+// Construct Hammersley low discrepancy sequence for reduced noise in Envmap sampling.
+const vec2 POINTS[32] = vec2[32](
+vec2(0.0,0.0),
+vec2(0.03125,0.5),
+vec2(0.0625,0.25),
+vec2(0.09375,0.75),
+vec2(0.125,0.125),
+vec2(0.15625,0.625),
+vec2(0.1875,0.375),
+vec2(0.21875,0.875),
+vec2(0.25,0.0625),
+vec2(0.28125,0.5625),
+vec2(0.3125,0.3125),
+vec2(0.34375,0.8125),
+vec2(0.375,0.1875),
+vec2(0.40625,0.6875),
+vec2(0.4375,0.4375),
+vec2(0.46875,0.9375),
+vec2(0.5,0.03125),
+vec2(0.53125,0.53125),
+vec2(0.5625,0.28125),
+vec2(0.59375,0.78125),
+vec2(0.625,0.15625),
+vec2(0.65625,0.65625),
+vec2(0.6875,0.40625),
+vec2(0.71875,0.90625),
+vec2(0.75,0.09375),
+vec2(0.78125,0.59375),
+vec2(0.8125,0.34375),
+vec2(0.84375,0.84375),
+vec2(0.875,0.21875),
+vec2(0.90625,0.71875),
+vec2(0.9375,0.46875),
+vec2(0.96875,0.96875)
+);
+
 
 vec3 FresnelSchlick(vec3 halfVec, vec3 view, vec3 specColor)
 {
@@ -70,4 +107,44 @@ vec3 computeLighting(vec3 specColor, vec3 diffColor, vec3 light, vec3 normal, ve
 	#else
 	return ComputeGGX(specColor, diffColor, light, normal, halfVec, view, gloss, fresnelFactor, dotNL);
 	#endif
+}
+
+mat3 localCoordinates(vec3 view, vec3 normal)
+{
+// Create basis so we can transform `view` direction into local coord system
+// We're not particularly attached to any basis as we have an isotropic roughness, and don't need to align axes with x,y terms.
+vec3 tangent = (abs(normal.x) < 0.99) ? vec3(1.0,0.0,0.0) : vec3(0.0,1.0,0.0);
+tangent = normalize (tangent - dot (tangent, normal) * normal);
+vec3 bitangent = cross(tangent, normal);
+
+mat3 basis = mat3(tangent, bitangent, normal);
+
+return basis;
+}
+
+
+// Modified version of "Sampling the GGX Distribution of Visible Normals" Eric Heitz, JCGT Vol 7 No 4 2018
+// We have isotropic alpha, so don't need alpha_x, alpha_y, but we need to transform the view direction into a local co-ordinate system.
+vec3 sampleGGXVNDF(vec3 Ve, float alpha, float U1, float U2)
+{
+
+
+// Section 3.2: transforming the view direction to the hemisphere configuration
+vec3 Vh = normalize(vec3(alpha * Ve.x, alpha * Ve.y, Ve.z));
+// Section 4.1: orthonormal basis (with special case if cross product is zero)
+float lensq = Vh.x * Vh.x + Vh.y * Vh.y;
+vec3 T1 = lensq > 0 ? vec3(-Vh.y, Vh.x, 0) * inversesqrt(lensq) : vec3(1,0,0);
+vec3 T2 = cross(Vh, T1);
+// Section 4.2: parameterization of the projected area
+float r = sqrt(U1);
+float phi = 2.0 * PI * U2;
+float t1 = r * cos(phi);
+float t2 = r * sin(phi);
+float s = 0.5 * (1.0 + Vh.z);
+t2 = (1.0 - s)*sqrt(1.0 - t1*t1) + s*t2;
+// Section 4.3: reprojection onto hemisphere
+vec3 Nh = t1*T1 + t2*T2 + sqrt(max(0.0, 1.0 - t1*t1 - t2*t2))*Vh;
+// Section 3.4: transforming the normal back to the ellipsoid configuration
+vec3 Ne = normalize(vec3(alpha * Nh.x, alpha * Nh.y, max(0.0, Nh.z)));
+return Ne;
 }
