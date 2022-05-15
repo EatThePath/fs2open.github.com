@@ -359,19 +359,39 @@ void main()
 	float mip = (envGloss) ? alpha * 25 : 0.0;
 	for(int i=0; i<32; ++i) 
 	{
+		// Implementation of the rendering method proposed in "Sampling the GGX Distribution of Visible Normals"
+		// Instead of calculating the probability of sampling a light (the distribution term) we sample points on the envmap
 		vec2 point = POINTS[i];
 		vec3 sampled_norm = basis * sampleGGXVNDF(view_local, alpha, point.x, point.y);
 		vec3 light_dir = reflect(-eyeDir, sampled_norm);
 		vec3 env_light_dir = vec3(envMatrix * vec4(light_dir, 0.0));
 		vec4 envColour = textureLod(sEnvmap, env_light_dir, mip);
+
+		// Fresnel calculation as with normal lights.
 		vec3 halfVec = normalize(light_dir + eyeDir);
 		float NdotL = dot(light_dir, sampled_norm);
+		vec3 fresnel = mix(specColor.rgb, FresnelSchlick(halfVec, eyeDir, specColor.rgb), specColor.a);
+
+		// geometry term and normalisiation from importance sampling:
+		// See: "Importance sampling microfacet-based BSDFs..." Heitz & d'Eon 2014
+
+		// Smith's method of decomposing g2 = g1*g1 
+		// gives us an optimisation here.
+		// eliminating the normalisation term needed
+		// instead of doing  I(L) * (F(V, L) * G2(N,V,L) / G1(N,V)
+		// Using Smith's method:
+		// = I(L) * (F(V, L) * G1(N,L)*G1(N,V)/G1(N,V)
+		// = I(L) * (F(V, L) * G1(N,L)
+
+		// We use standard alphaPrime here instead of IBL 
+		// as we're still treating these like lights
 		float alphaPrime = roughness + 1.0f;
 		float k = alphaPrime * alphaPrime / 8.0f;
-		vec3 fresnel = mix(specColor.rgb, FresnelSchlick(halfVec, eyeDir, specColor.rgb), specColor.a);
 		float g1vNL = GeometrySchlickGGX(NdotL, k);
+
+
 		vec3 lighting = envColour.rgb * fresnel * g1vNL;
-	    //vec3 lighting = envColour.rgb;
+		// Divide by number of samples as we're averaging over the skybox.
 		emissiveColor.rgb += lighting.rgb/32.0;
 	}
 

@@ -81,9 +81,13 @@ vec3 ComputeGGX(vec3 specColor, vec3 diffColor, vec3 light, vec3 normal, vec3 ha
 	// Fresnel Term - Fresnel-Schlick
 	vec3 fresnel = mix(specColor, FresnelSchlick(halfVec, view, specColor), fresnelFactor);
 
-	// Geometry Term - Schlick-GGX
+	// Geometry Term - Schlick-GGX approximation
 	float alphaPrime = roughness + 1.0f;
 	float k = alphaPrime * alphaPrime / 8.0f;
+	// Smith's method: 
+	// Microsurfaces block light rays coming in from the light 
+	// AND block light rays reflecting to the camera.
+	// Hence, model both and multiply.
 	float g1vNL = GeometrySchlickGGX(dotNL, k);
 	float g1vNV = GeometrySchlickGGX(dotNV, k);
 	float geometry = g1vNL * g1vNV;
