@@ -9,7 +9,7 @@ const float GLOW_MAP_INTENSITY			= 1.5;
 const float GLOW_MAP_SRGB_MULTIPLIER	= 3.0;
 const float PI = 3.14159f;
 
-
+#ifdef FLAG_ENV_MAP
 // Construct Hammersley low discrepancy sequence for reduced noise in Envmap sampling.
 const vec2 POINTS[32] = vec2[32](
 vec2(0.0,0.0),
@@ -45,7 +45,7 @@ vec2(0.90625,0.71875),
 vec2(0.9375,0.46875),
 vec2(0.96875,0.96875)
 );
-
+#endif
 
 vec3 FresnelSchlick(vec3 halfVec, vec3 view, vec3 specColor)
 {
@@ -127,8 +127,6 @@ return basis;
 // We have isotropic alpha, so don't need alpha_x, alpha_y, but we need to transform the view direction into a local co-ordinate system.
 vec3 sampleGGXVNDF(vec3 Ve, float alpha, float U1, float U2)
 {
-
-
 // Section 3.2: transforming the view direction to the hemisphere configuration
 vec3 Vh = normalize(vec3(alpha * Ve.x, alpha * Ve.y, Ve.z));
 // Section 4.1: orthonormal basis (with special case if cross product is zero)
