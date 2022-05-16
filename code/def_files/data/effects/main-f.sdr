@@ -102,9 +102,9 @@ in VertexOutput {
 #ifdef FLAG_ENV_MAP
 	vec3 envReflect;
 #endif
-#ifdef FLAG_NORMAL_MAP
-	mat3 tangentMatrix;
-#endif
+
+mat3 tangentMatrix;
+
 #ifdef FLAG_FOG
 	float fogDist;
 #endif
@@ -351,12 +351,14 @@ void main()
  #endif
 #endif
 #ifdef FLAG_ENV_MAP
-	mat3 basis = localCoordinates(eyeDir, normal);
+	// Use unmodified tangent as initial guess for basis.
+	mat3 basis = localCoordinates(eyeDir, normal, vertIn.tangentMatrix[0]);
 	// cheeky bit of linalg, basis is orthonormal so M^-1 = M^T, 
 	vec3 view_local = eyeDir * basis;
 	float roughness = clamp(1.0f - glossData, 0.0f, 1.0f);
 	float alpha = roughness * roughness;
-	float mip = (envGloss) ? alpha * 25 : 0.0;
+	// mip level calculation here is completely eyeballed based off flat spheres and the 512 res envmaps.
+	float mip = (envGloss) ? max(roughness * 25, 2.0) : 0.0;
 	for(int i=0; i<32; ++i) 
 	{
 		// Implementation of the rendering method proposed in "Sampling the GGX Distribution of Visible Normals"
