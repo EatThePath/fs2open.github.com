@@ -361,7 +361,7 @@ void main()
 	float mip = (envGloss) ? max(roughness * 25, 2.0) : 0.0;
 	for(int i=0; i<32; ++i) 
 	{
-		// Implementation of the rendering method proposed in "Sampling the GGX Distribution of Visible Normals"
+		// Implementation of the rendering method proposed in "Sampling the GGX Distribution of Visible Normals" E. Heitz 2018
 		// Instead of calculating the probability of sampling a light (the distribution term) we sample points on the envmap
 		vec2 point = POINTS[i];
 		vec3 sampled_norm = basis * sampleGGXVNDF(view_local, alpha, point.x, point.y);
