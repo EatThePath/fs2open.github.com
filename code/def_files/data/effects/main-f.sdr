@@ -371,24 +371,26 @@ void main()
 
 		// Fresnel calculation as with normal lights.
 		vec3 halfVec = normalize(light_dir + eyeDir);
-		float NdotL = dot(light_dir, sampled_norm);
 		vec3 fresnel = mix(specColor.rgb, FresnelSchlick(halfVec, eyeDir, specColor.rgb), specColor.a);
 
 		// geometry term and normalisiation from importance sampling:
 		// See: "Importance sampling microfacet-based BSDFs..." Heitz & d'Eon 2014
 
+		// We use standard alphaPrime here instead of IBL 
+		// as we're still treating these like lights
+		float alphaPrime = roughness + 1.0f;
+		float k = alphaPrime * alphaPrime / 8.0f;
+		// geometry occlusion term is based off average surface normal, 
+		// hence the use of normal rather than sampled_norm here.
+		float NdotL = max(dot(light_dir, normal),0);
 		// Smith's method of decomposing g2 = g1*g1 
 		// gives us an optimisation here.
-		// eliminating the normalisation term needed
+		// eliminating the normalisation term G1(N,V)
 		// instead of doing  I(L) * (F(V, L) * G2(N,V,L) / G1(N,V)
 		// Using Smith's method:
 		// = I(L) * (F(V, L) * G1(N,L)*G1(N,V)/G1(N,V)
 		// = I(L) * (F(V, L) * G1(N,L)
 
-		// We use standard alphaPrime here instead of IBL 
-		// as we're still treating these like lights
-		float alphaPrime = roughness + 1.0f;
-		float k = alphaPrime * alphaPrime / 8.0f;
 		float g1vNL = GeometrySchlickGGX(NdotL, k);
 
 

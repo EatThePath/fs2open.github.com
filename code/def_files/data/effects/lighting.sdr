@@ -87,7 +87,7 @@ vec3 ComputeGGX(vec3 specColor, vec3 diffColor, vec3 light, vec3 normal, vec3 ha
 	// Smith's method: 
 	// Microsurfaces block light rays coming in from the light 
 	// AND block light rays reflecting to the camera.
-	// Hence, model both and multiply.
+	// Hence, model both seperately and multiply.
 	float g1vNL = GeometrySchlickGGX(dotNL, k);
 	float g1vNV = GeometrySchlickGGX(dotNV, k);
 	float geometry = g1vNL * g1vNV;
