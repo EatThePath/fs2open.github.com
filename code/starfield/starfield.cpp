@@ -2864,7 +2864,6 @@ void stars_setup_environment_mapping(camid cid) {
 
 	extern float View_zoom;
 	float old_zoom = View_zoom, new_zoom = 1.0f;//0.925f;
-	int i = 0;
 
 	if(!cid.isValid())
 		return;
@@ -2918,54 +2917,22 @@ void stars_setup_environment_mapping(camid cid) {
 
 	// Save the previous render target so we can reset it once we are done here
 	auto previous_target = gr_screen.rendering_to_texture;
+	// Encode above table into directions and values.
+	// 0 = X, 1 = Y, 2 = Z 
+	int f_dir[6] = {0, 0, 1, 1, 2, 2};
+	int u_dir[6] = {1, 1, 2, 2, 1, 1};
+	int r_dir[6] = {2, 2, 0, 0, 0, 0};
+	float f_val[6] = { 1.0f, -1.0f,  1.0f, -1.0f,  1.0f, -1.0f};
+	float u_val[6] = { 1.0f,  1.0f, -1.0f,  1.0f,  1.0f,  1.0f};
+	float r_val[6] = {-1.0f,  1.0f,  1.0f,  1.0f,  1.0f, -1.0f};
 
-	// face 1 (px / right)
-	memset( &new_orient, 0, sizeof(matrix) );
-	new_orient.vec.fvec.xyz.x =  1.0f;
-	new_orient.vec.uvec.xyz.y =  1.0f;
-	new_orient.vec.rvec.xyz.z = -1.0f;
-	render_environment(i, &cam_pos, &new_orient, new_zoom);
-	i++; // bump!
-
-	// face 2 (nx / left)
-	memset( &new_orient, 0, sizeof(matrix) );
-	new_orient.vec.fvec.xyz.x = -1.0f;
-	new_orient.vec.uvec.xyz.y =  1.0f;
-	new_orient.vec.rvec.xyz.z =  1.0f;
-	render_environment(i, &cam_pos, &new_orient, new_zoom);
-	i++; // bump!
-
-	// face 3 (py / up)
-	memset( &new_orient, 0, sizeof(matrix) );
-	new_orient.vec.fvec.xyz.y =  1.0f;
-	new_orient.vec.uvec.xyz.z =  -1.0f;
-	new_orient.vec.rvec.xyz.x =  1.0f;
-	render_environment(i, &cam_pos, &new_orient, new_zoom);
-	i++; // bump!
-
-	// face 4 (ny / down)
-	memset( &new_orient, 0, sizeof(matrix) );
-	new_orient.vec.fvec.xyz.y =  -1.0f;
-	new_orient.vec.uvec.xyz.z =  1.0f ;
-	new_orient.vec.rvec.xyz.x =  1.0f;
-	render_environment(i, &cam_pos, &new_orient, new_zoom);
-	i++; // bump!
-
-	// face 5 (pz / forward)
-	memset( &new_orient, 0, sizeof(matrix) );
-	new_orient.vec.fvec.xyz.z =  1.0f;
-	new_orient.vec.uvec.xyz.y =  1.0f;
-	new_orient.vec.rvec.xyz.x =  1.0f;
-	render_environment(i, &cam_pos, &new_orient, new_zoom);
-	i++; // bump!
-
-	// face 6 (nz / back)
-	memset( &new_orient, 0, sizeof(matrix) );
-	new_orient.vec.fvec.xyz.z = -1.0f;
-	new_orient.vec.uvec.xyz.y =  1.0f;
-	new_orient.vec.rvec.xyz.x = -1.0f;
-	render_environment(i, &cam_pos, &new_orient, new_zoom);
-
+	for (int i = 0; i < 6; i++) {
+		memset(&new_orient, 0, sizeof(matrix));
+		new_orient.vec.fvec.a1d[f_dir[i]] = f_val[i];
+		new_orient.vec.uvec.a1d[u_dir[i]] = u_val[i];
+		new_orient.vec.rvec.a1d[r_dir[i]] = r_val[i];
+		render_environment(i, &cam_pos, &new_orient, new_zoom);
+	}
 
 	// we're done, so now reset
 	bm_set_render_target(previous_target);
