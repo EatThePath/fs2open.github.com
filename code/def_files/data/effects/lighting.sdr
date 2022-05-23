@@ -76,7 +76,7 @@ vec3 ComputeGGX(vec3 specColor, vec3 diffColor, vec3 light, vec3 normal, vec3 ha
 
 	// Distribution Term - Trowbridge-Reitz GGX
 	float alphaSqr = alpha * alpha;
-	float denom = dotNH * dotNH * (alphaSqr - 1.0f) + 1.0f;
+	float denom = dotNH * dotNH * (alphaSqr - 1.0f) + 1.001f; // Extra .001 to prevent div 0
 	float distribution = alphaSqr / (PI * denom * denom);
 
 	// Fresnel Term - Fresnel-Schlick
