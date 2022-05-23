@@ -377,15 +377,13 @@ void main()
 	// Small hack here, we rotate the generated samples so that we get smoothly varying samples with fixed U1, U2
 	// Not doing this introduces warping near Ve=(0,0,1) that messes up implicit derivatives needed for sampling.
 	mat2 samp_rot = mat2(T1.xy, normalize(T2.xy));
-	const uint NUM_SAMPLES = 32;
+
 	for(int i=0; i<NUM_SAMPLES; ++i) 
 	{
-		vec2 point = POINTS[i];
+		vec2 point = CIRCLE_POINTS[i];
 		// Section 4.2: parameterization of the projected area
-		float r = sqrt(point.x);
-		float phi = 2.0 * PI * point.y;
-		vec2 t = r * vec2(cos(phi), sin(phi));
-		t = t * samp_rot;
+		// Precalculated.
+		vec2 t = point * samp_rot;
 
 		float t1 = t.x;
 		float t2 = t.y;
