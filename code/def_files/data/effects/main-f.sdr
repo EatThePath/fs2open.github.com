@@ -352,7 +352,7 @@ void main()
 #endif
 #ifdef FLAG_ENV_MAP
 	// Bit of a hack here, pretend we're doing blinn-phong shading and use a (modified version of) the derivation from
-	// Plausible Blinn-Phong Reflectionof Standard Cube MIP-Maps - McGuire et al.
+	// Plausible Blinn-Phong Reflection of Standard Cube MIP-Maps - McGuire et al.
 	// to determine the mip bias.
 	// We use the specular term listed at http://graphicrants.blogspot.com/2013/08/specular-brdf-reference.html
 	// 1/(pi*alpha^2) * NdotM^((2/alpha^2)-2)
