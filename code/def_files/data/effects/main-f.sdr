@@ -351,89 +351,55 @@ void main()
  #endif
 #endif
 #ifdef FLAG_ENV_MAP
-	// Use unmodified tangent as initial guess for basis.
-	//mat3 basis = localCoordinates(eyeDir, normal, vertIn.tangentMatrix[0]);
-	mat3 basis = localCoordinates(normal, dFdx(normal));
-	// cheeky bit of linalg, basis is orthonormal so M^-1 = M^T, 
-	vec3 view_local = eyeDir * basis;
+	// Bit of a hack here, pretend we're doing blinn-phong shading and use a (modified version of) the derivation from
+	// Plausible Blinn-Phong Reflectionof Standard Cube MIP-Maps - McGuire et al.
+	// to determine the mip bias.
+	// We use the specular term listed at http://graphicrants.blogspot.com/2013/08/specular-brdf-reference.html
+	// 1/(pi*alpha^2) * NdotM^((2/alpha^2)-2)
+	// so let s = (2/alpha^2 - 2)
+	// 1/2 log(s + 1) = 1/2 log(2/alpha^2 -1)
+	const float ENV_REZ = 512;
+	const float REZ_BIAS = log2(ENV_REZ * sqrt(3));
+
 	float roughness = clamp(1.0f - glossData, 0.0f, 1.0f);
 	float alpha = roughness * roughness;
 	float alphaSqr = alpha * alpha;
+	float rough_bias = 0.5 * log2(2/alphaSqr - 1);
+	float mip_bias = REZ_BIAS - rough_bias;
 
-	float mip_bias = min(roughness * 15.0, 6.0);
+	// Sample light, using mip bias to blur it.
+	vec3 light_dir = reflect(-eyeDir, normal);
+	vec3 env_light_dir = vec3(envMatrix * vec4(light_dir, 0.0));
+	vec4 envColour = textureLod(sEnvmap, env_light_dir, mip_bias);
 
-	// Modified version of "Sampling the GGX Distribution of Visible Normals" Eric Heitz, JCGT Vol 7 No 4 2018
-	// Instead of calculating the probability of sampling a light (the distribution term) we sample points on the envmap
+	vec3 halfVec = normalize(light_dir + eyeDir);
 
-	// We take as much out of the function call as possible so we're not recalculating the necessary transform matices on every invocation 
+	// Fresnel calculation as with standard lights.
+	vec3 fresnel = mix(specColor.rgb, FresnelSchlick(halfVec, eyeDir, specColor.rgb), specColor.a);
 
-	// Section 3.2: transforming the view direction to the hemisphere configuration
-	vec3 Vh = normalize(vec3(alpha * view_local.x, alpha * view_local.y, view_local.z));
-	// Section 4.1: orthonormal basis (with special case if cross product is zero)
-	float lensq = Vh.x * Vh.x + Vh.y * Vh.y;
-	vec3 T1 = lensq > 0 ? vec3(-Vh.y, Vh.x, 0) * inversesqrt(lensq) : vec3(1,0,0);
-	vec3 T2 = cross(Vh, T1);
+	// geometry term and normalisiation from importance sampling:
+	// See: "Importance sampling microfacet-based BSDFs..." Heitz & d'Eon 2014
 
-	// Small hack here, we rotate the generated samples so that we get smoothly varying samples with fixed U1, U2
-	// Not doing this introduces warping near Ve=(0,0,1) that messes up implicit derivatives needed for sampling.
-	mat2 samp_rot = mat2(T1.xy, normalize(T2.xy));
+	// We use standard alphaPrime here instead of IBL 
+	// as we're still treating these like lights
+	float alphaPrime = roughness + 1.0f;
+	float k = alphaPrime * alphaPrime / 8.0f;
 
-	for(int i=0; i<NUM_SAMPLES; ++i) 
-	{
-		vec2 point = CIRCLE_POINTS[i];
-		// Section 4.2: parameterization of the projected area
-		// Precalculated.
-		vec2 t = point * samp_rot;
+	// geometry occlusion term is based off average surface normal, 
+	// hence the use of normal rather than sampled_norm here.
+	float NdotL = max(dot(light_dir, normal),0);
+	// Smith's method of decomposing g2 = g1*g1 
+	// gives us an optimisation here.
+	// eliminating the normalisation term G1(N,V)
+	// instead of doing  I(L) * (F(V, L) * G2(N,V,L) / G1(N,V)
+	// Using Smith's method:
+	// = I(L) * (F(V, L) * G1(N,L)*G1(N,V)/G1(N,V)
+	// = I(L) * (F(V, L) * G1(N,L)
+	float g1vNL = GeometrySchlickGGX(NdotL, k);
 
-		float t1 = t.x;
-		float t2 = t.y;
-		float s = 0.5 * (1.0 + Vh.z);
-		t2 = (1.0 - s)*sqrt(1.0 - t1*t1) + s*t2;
-		// Section 4.3: reprojection onto hemisphere
-		vec3 Nh = t1*T1 + t2*T2 + sqrt(max(0.0, 1.0 - t1*t1 - t2*t2))*Vh;
-		// Section 3.4: transforming the normal back to the ellipsoid configuration
-		vec3 sampled_norm = basis * normalize(vec3(alpha * Nh.x, alpha * Nh.y, max(0.0, Nh.z)));
-
-		// Use BDRF approximation method listed at end of paper.
-		// Get incoming light direction and colour.
-		// Instead of calculating the probability of sampling a light (the distribution term) we're sampling points on the envmap
-		// So they average out to give us the result we want.
-		vec3 light_dir = reflect(-eyeDir, sampled_norm);
-		vec3 env_light_dir = vec3(envMatrix * vec4(light_dir, 0.0));
-		vec4 envColour = texture(sEnvmap, env_light_dir, mip_bias);
-
-
-
-		vec3 halfVec = normalize(light_dir + eyeDir);
-
-		// Fresnel calculation as with standard lights.
-		vec3 fresnel = mix(specColor.rgb, FresnelSchlick(halfVec, eyeDir, specColor.rgb), specColor.a);
-
-		// geometry term and normalisiation from importance sampling:
-		// See: "Importance sampling microfacet-based BSDFs..." Heitz & d'Eon 2014
-
-		// We use standard alphaPrime here instead of IBL 
-		// as we're still treating these like lights
-		float alphaPrime = roughness + 1.0f;
-		float k = alphaPrime * alphaPrime / 8.0f;
-
-		// geometry occlusion term is based off average surface normal, 
-		// hence the use of normal rather than sampled_norm here.
-		float NdotL = max(dot(light_dir, normal),0);
-		// Smith's method of decomposing g2 = g1*g1 
-		// gives us an optimisation here.
-		// eliminating the normalisation term G1(N,V)
-		// instead of doing  I(L) * (F(V, L) * G2(N,V,L) / G1(N,V)
-		// Using Smith's method:
-		// = I(L) * (F(V, L) * G1(N,L)*G1(N,V)/G1(N,V)
-		// = I(L) * (F(V, L) * G1(N,L)
-		float g1vNL = GeometrySchlickGGX(NdotL, k);
-
-
-		vec3 lighting = envColour.rgb * fresnel * g1vNL;
-		// Divide by number of samples as we're averaging over the skybox.
-		emissiveColor.rgb += lighting.rgb/NUM_SAMPLES;
-	}
+	vec3 lighting = envColour.rgb * fresnel * g1vNL;
+	// Divide by number of samples as we're averaging over the skybox.
+	emissiveColor.rgb += lighting.rgb;
 
 #endif
 #ifdef FLAG_GLOW_MAP
