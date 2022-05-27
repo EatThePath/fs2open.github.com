@@ -9,44 +9,6 @@ const float GLOW_MAP_INTENSITY			= 1.5;
 const float GLOW_MAP_SRGB_MULTIPLIER	= 3.0;
 const float PI = 3.14159f;
 
-#ifdef FLAG_ENV_MAP
-// Construct Hammersley low discrepancy sequence for reduced noise/variance in Envmap sampling.
-const uint NUM_SAMPLES = 32;
-const vec2 CIRCLE_POINTS[32] = vec2[32](
-vec2( 0.0000, 0.0000),
-vec2(-0.1768, 0.0000),
-vec2( 0.0000, 0.2500),
-vec2(-0.0000,-0.3062),
-vec2( 0.2500, 0.2500),
-vec2(-0.2795,-0.2795),
-vec2(-0.3062, 0.3062),
-vec2( 0.3307,-0.3307),
-vec2( 0.4619, 0.1913),
-vec2(-0.4900,-0.2029),
-vec2(-0.2139, 0.5165),
-vec2( 0.2244,-0.5417),
-vec2( 0.2343, 0.5658),
-vec2(-0.2439,-0.5889),
-vec2(-0.6111, 0.2531),
-vec2( 0.6325,-0.2620),
-vec2( 0.6935, 0.1379),
-vec2(-0.7149,-0.1422),
-vec2(-0.1463, 0.7356),
-vec2( 0.1503,-0.7557),
-vec2( 0.4392, 0.6573),
-vec2(-0.4501,-0.6736),
-vec2(-0.6894, 0.4607),
-vec2( 0.7049,-0.4710),
-vec2( 0.7201, 0.4811),
-vec2(-0.7349,-0.4911),
-vec2(-0.5008, 0.7495),
-vec2( 0.5103,-0.7638),
-vec2( 0.1825, 0.9174),
-vec2(-0.1857,-0.9337),
-vec2(-0.9496, 0.1889),
-vec2( 0.9653,-0.1920)
-);
-#endif
 
 vec3 FresnelSchlick(vec3 halfVec, vec3 view, vec3 specColor)
 {
