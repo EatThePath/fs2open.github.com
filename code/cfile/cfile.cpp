@@ -86,7 +86,7 @@ cf_pathtype Pathtypes[CF_MAX_PATH_TYPES]  = {
 	{ CF_TYPE_DEMOS,				"data" DIR_SEPARATOR_STR "demos",											".fsd",								CF_TYPE_DATA	},
 	{ CF_TYPE_CBANIMS,				"data" DIR_SEPARATOR_STR "cbanims",											".pcx .ani .eff .tga .jpg .png .dds",	CF_TYPE_DATA	},
 	{ CF_TYPE_INTEL_ANIMS,			"data" DIR_SEPARATOR_STR "intelanims",										".pcx .ani .eff .tga .jpg .png .dds",	CF_TYPE_DATA	},
-	{ CF_TYPE_SCRIPTS,				"data" DIR_SEPARATOR_STR "scripts",											".lua .lc",							CF_TYPE_DATA	},
+	{ CF_TYPE_SCRIPTS,				"data" DIR_SEPARATOR_STR "scripts",											".lua .lc .fnl",						CF_TYPE_DATA	},
 	{ CF_TYPE_FICTION,				"data" DIR_SEPARATOR_STR "fiction",											".txt",								CF_TYPE_DATA	}, 
 	{ CF_TYPE_FREDDOCS,				"data" DIR_SEPARATOR_STR "freddocs",										".html",							CF_TYPE_DATA	},
 	{ CF_TYPE_INTERFACE_MARKUP,		"data" DIR_SEPARATOR_STR "interface" DIR_SEPARATOR_STR "markup",			".rml",								CF_TYPE_INTERFACE	},
@@ -635,7 +635,7 @@ void cf_create_directory(int dir_type, uint32_t location_flags)
 //
 // parameters:  *filepath ==> name of file to open (may be path+name)
 //              *mode     ==> specifies how file should be opened (eg "rb" for read binary)
-//                            passing NULL to mode deletes the file if it exists and returns NULL
+//                            passing NULL to mode triggers an assert and returns NULL
 //               type     ==> one of:    CFILE_NORMAL
 //                                       CFILE_MEMORY_MAPPED
 //					  dir_type	=>	override extension check, value is one of CF_TYPE* #defines
@@ -782,7 +782,7 @@ CFILE* _cfopen(const char* source, int line, const char* file_path, const char* 
 //
 // parameters:	*filepath	==> name of file to open (may be path+name)
 //				*mode		==> specifies how file should be opened (eg "rb" for read binary)
-//								passing NULL to mode deletes the file if it exists and returns NULL
+//								passing NULL to mode triggers an assert and returns NULL
 
 //				dir_type	=>	override extension check, value is one of CF_TYPE* #defines
 //

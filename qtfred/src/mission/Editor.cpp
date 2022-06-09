@@ -736,11 +736,7 @@ int Editor::create_ship(matrix* orient, vec3d* pos, int ship_type) {
 			// the depart item
 			if (!(sip->is_small_ship())) {
 				shipp->orders_accepted = ship_get_default_orders_accepted(sip);
-
-				for(size_t i = 0; i < Player_orders.size(); i++) {
-					if (Player_orders[i].id & DEPART_ITEM)
-						shipp->orders_accepted.erase(i);
-				}
+				shipp->orders_accepted.erase(DEPART_ITEM);
 			}
 		} else {
 			shipp->orders_accepted.clear();
@@ -2770,7 +2766,7 @@ const char* Editor::error_check_initial_orders(ai_goal* goals, int ship, int win
 		switch (goals[i].ai_mode) {
 		case AI_GOAL_DESTROY_SUBSYSTEM:
 			Assert(flag == 2 && inst >= 0);
-			if (ship_get_subsys_index(&Ships[inst], goals[i].docker.name) < 0)
+			if (ship_find_subsys(&Ships[inst], goals[i].docker.name) < 0)
 				return "Unknown subsystem type";
 
 			break;

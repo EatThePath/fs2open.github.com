@@ -2458,7 +2458,7 @@ int parse_create_object_sub(p_object *p_objp)
 				send_ship_create_packet(&Objects[objnum], (p_objp == Arriving_support_ship));
 		}
 		// also add this ship to the multi ship tracking and interpolation struct
-		multi_ship_record_add_ship(objnum);
+		multi_rollback_ship_record_add_ship(objnum);
 	}
 
 	// If the ship is in a wing, this will be done in mission_set_wing_arrival_location() instead
@@ -3357,9 +3357,10 @@ int parse_object(mission *pm, int  /*flag*/, p_object *p_objp)
         if (tmp_orders != -1) {
 			p_objp->flags.set(Mission::Parse_Object_Flags::SF_Use_unique_orders);
 
-			for(size_t j = 0; j < Player_orders.size(); j++){
-				if(Player_orders[j].id & tmp_orders)
-					p_objp->orders_accepted.insert(j);
+			//Iterate over all player orders for the bitfield, but restrict to those that the integer could actually provide
+			for(size_t j = 0; j < Player_orders.size() && j < std::numeric_limits<decltype(tmp_orders)>::digits; j++) {
+				if((1 << j) & tmp_orders)
+					p_objp->orders_accepted.insert(j + 1); //The first "true" order starts at idx 1, since 0 can be "no order"
 			}
 		}
     }

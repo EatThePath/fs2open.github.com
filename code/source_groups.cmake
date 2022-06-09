@@ -423,6 +423,8 @@ add_file_folder("Graphics"
 	graphics/2d.h
 	graphics/decal_draw_list.cpp
 	graphics/decal_draw_list.h
+	graphics/debug_sphere.cpp
+	graphics/debug_sphere.h
 	graphics/color.cpp
 	graphics/color.h
 	graphics/grbatch.cpp
@@ -899,6 +901,8 @@ add_file_folder("Network"
 	network/multi_endgame.h
 	network/multi_fstracker.cpp
 	network/multi_fstracker.h
+	network/multi_interpolate.cpp
+	network/multi_interpolate.h
 	network/multi_ingame.cpp
 	network/multi_ingame.h
 	network/multi_kick.cpp
@@ -935,6 +939,8 @@ add_file_folder("Network"
 	network/multi_sw.h
 	network/multi_team.cpp
 	network/multi_team.h
+	network/multi_time_manager.cpp
+	network/multi_time_manager.h
 	network/multi_update.cpp
 	network/multi_update.h
 	network/multi_voice.cpp
@@ -1209,6 +1215,8 @@ add_file_folder("Scripting"
 	scripting/doc_json.h
 	scripting/doc_parser.cpp
 	scripting/doc_parser.h
+	scripting/global_hooks.cpp
+	scripting/global_hooks.h
 	scripting/hook_api.cpp
 	scripting/hook_api.h
 	scripting/lua.cpp
@@ -1246,6 +1254,8 @@ add_file_folder("Scripting\\\\Api\\\\Libs"
 	scripting/api/libs/bitops.h
 	scripting/api/libs/cfile.cpp
 	scripting/api/libs/cfile.h
+	scripting/api/libs/controls.cpp
+	scripting/api/libs/controls.h
 	scripting/api/libs/engine.cpp
 	scripting/api/libs/engine.h
 	scripting/api/libs/graphics.cpp
@@ -1291,12 +1301,12 @@ add_file_folder("Scripting\\\\Api\\\\Objs"
 	scripting/api/objs/cmd_brief.h
 	scripting/api/objs/cockpit_display.cpp
 	scripting/api/objs/cockpit_display.h
+	scripting/api/objs/control_binding.cpp
+	scripting/api/objs/control_binding.h
 	scripting/api/objs/color.cpp
 	scripting/api/objs/color.h
 	scripting/api/objs/control_info.cpp
 	scripting/api/objs/control_info.h
-	scripting/api/objs/controls.cpp
-	scripting/api/objs/controls.h
 	scripting/api/objs/debris.cpp
 	scripting/api/objs/debris.h
 	scripting/api/objs/decaldefinition.cpp

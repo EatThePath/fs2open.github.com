@@ -59,6 +59,7 @@
 #include "gamesequence/gamesequence.h"
 #include "gamesnd/eventmusic.h"
 #include "gamesnd/gamesnd.h"
+#include "graphics/debug_sphere.h"
 #include "graphics/font.h"
 #include "graphics/light.h"
 #include "graphics/matrix.h"
@@ -162,6 +163,7 @@
 #include "render/batching.h"
 #include "scpui/rocket_ui.h"
 #include "scripting/api/objs/gamestate.h"
+#include "scripting/global_hooks.h"
 #include "scripting/hook_api.h"
 #include "scripting/scripting.h"
 #include "ship/afterburner.h"
@@ -1985,7 +1987,7 @@ void game_init()
 	scpui::initialize();
 
 	Script_system.RunInitFunctions();
-	Script_system.RunCondition(CHA_GAMEINIT);
+	scripting::hooks::OnGameInit->run();
 
 	game_title_screen_close();
 
@@ -3419,6 +3421,7 @@ void game_render_frame( camid cid )
 
 
 #ifndef NDEBUG
+	debug_sphere::render();
 	ai_debug_render_stuff();
 	extern void snd_spew_debug_info();
 	snd_spew_debug_info();
@@ -3465,9 +3468,6 @@ void game_render_frame( camid cid )
 	extern int OO_update_index;	
 	multi_rate_display(OO_update_index, gr_screen.center_offset_x + 375, gr_screen.center_offset_y);
 
-	// test
-	extern void oo_display();
-	oo_display();			
 #endif
 	
 	g3_end_frame();
