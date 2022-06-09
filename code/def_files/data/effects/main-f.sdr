@@ -128,6 +128,7 @@ uniform sampler2DArray sSpecmap;
 #endif
 #ifdef FLAG_ENV_MAP
 uniform samplerCube sEnvmap;
+uniform samplerCube sIrrmap;
 #endif
 #ifdef FLAG_NORMAL_MAP
 uniform sampler2DArray sNormalmap;
@@ -370,36 +371,31 @@ void main()
 	// Sample light, using mip bias to blur it.
 	vec3 light_dir = reflect(-eyeDir, normal);
 	vec3 env_light_dir = vec3(envMatrix * vec4(light_dir, 0.0));
-	vec4 envColour = textureLod(sEnvmap, env_light_dir, mip_bias);
+	vec4 specEnvColour = textureLod(sEnvmap, env_light_dir, mip_bias);
 
 	vec3 halfVec = normalize(light_dir + eyeDir);
 
+	// Lots of hacks here to get things to look right. We aren't loading a BRDF split-sum integral texture 
+	// or properly calculating IBL levels.
 	// Fresnel calculation as with standard lights.
+
 	vec3 fresnel = mix(specColor.rgb, FresnelSchlick(halfVec, eyeDir, specColor.rgb), specColor.a);
 
-	// geometry term and normalisiation from importance sampling:
-	// See: "Importance sampling microfacet-based BSDFs..." Heitz & d'Eon 2014
+	// Pseudo-IBL, so use k_IBL 
+	float k = alpha * alpha/ 2.0f;
 
-	// We use standard alphaPrime here instead of IBL 
-	// as we're still treating these like lights
-	float alphaPrime = roughness + 1.0f;
-	float k = alphaPrime * alphaPrime / 8.0f;
-
-	// geometry occlusion term is based off average surface normal, 
-	// hence the use of normal rather than sampled_norm here.
 	float NdotL = max(dot(light_dir, normal),0);
-	// Smith's method of decomposing g2 = g1*g1 
-	// gives us an optimisation here.
-	// eliminating the normalisation term G1(N,V)
-	// instead of doing  I(L) * (F(V, L) * G2(N,V,L) / G1(N,V)
-	// Using Smith's method:
-	// = I(L) * (F(V, L) * G1(N,L)*G1(N,V)/G1(N,V)
-	// = I(L) * (F(V, L) * G1(N,L)
-	float g1vNL = GeometrySchlickGGX(NdotL, k);
 
-	vec3 lighting = envColour.rgb * fresnel * g1vNL;
-	// Divide by number of samples as we're averaging over the skybox.
-	emissiveColor.rgb += lighting.rgb;
+	float g1vNL = GeometrySchlickGGX(NdotL, k);
+	// Added the /PI term in as things were looking too bright, and the diffuse term is divided by pi as well so??
+	vec3 specEnvLighting = specEnvColour.rgb * fresnel * g1vNL/PI;
+
+	vec3 kD = vec3(1.0)-fresnel;
+	kD *= (vec3(1.0) - specColor.rgb);
+	vec3 diffEnvColor = texture(sIrrmap, vec3(envMatrix * vec4(normal, 0.0))).rgb;
+	vec3 diffEnvLighting = kD * baseColor.rgb * diffEnvColor/PI;
+	emissiveColor.rgb += specEnvLighting + diffEnvLighting;
+
 
 #endif
 #ifdef FLAG_GLOW_MAP
