@@ -387,12 +387,12 @@ void main()
 	float NdotL = max(dot(light_dir, normal),0);
 
 	float g1vNL = GeometrySchlickGGX(NdotL, k);
-	vec3 specEnvLighting = specEnvColour.rgb * fresnel * g1vNL;
+	vec3 specEnvLighting = specEnvColour.rgb * fresnel * g1vNL * aoFactors.y;
 
 	vec3 kD = vec3(1.0)-fresnel;
 	kD *= (vec3(1.0) - specColor.rgb);
 	vec3 diffEnvColor = srgb_to_linear(texture(sIrrmap, vec3(envMatrix * vec4(normal, 0.0))).rgb);
-	vec3 diffEnvLighting = kD * baseColor.rgb * diffEnvColor;
+	vec3 diffEnvLighting = kD * baseColor.rgb * diffEnvColor * aoFactors.x;
 	emissiveColor.rgb += specEnvLighting + diffEnvLighting;
 
 
