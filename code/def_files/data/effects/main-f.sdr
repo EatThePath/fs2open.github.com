@@ -371,7 +371,7 @@ void main()
 	// Sample light, using mip bias to blur it.
 	vec3 light_dir = reflect(-eyeDir, normal);
 	vec3 env_light_dir = vec3(envMatrix * vec4(light_dir, 0.0));
-	vec4 specEnvColour = textureLod(sEnvmap, env_light_dir, mip_bias);
+	vec4 specEnvColour = srgb_to_linear(textureLod(sEnvmap, env_light_dir, mip_bias));
 
 	vec3 halfVec = normalize(light_dir + eyeDir);
 
@@ -387,13 +387,12 @@ void main()
 	float NdotL = max(dot(light_dir, normal),0);
 
 	float g1vNL = GeometrySchlickGGX(NdotL, k);
-	// Added the /PI term in as things were looking too bright, and the diffuse term is divided by pi as well so??
-	vec3 specEnvLighting = specEnvColour.rgb * fresnel * g1vNL/PI;
+	vec3 specEnvLighting = specEnvColour.rgb * fresnel * g1vNL;
 
 	vec3 kD = vec3(1.0)-fresnel;
 	kD *= (vec3(1.0) - specColor.rgb);
-	vec3 diffEnvColor = texture(sIrrmap, vec3(envMatrix * vec4(normal, 0.0))).rgb;
-	vec3 diffEnvLighting = kD * baseColor.rgb * diffEnvColor/PI;
+	vec3 diffEnvColor = srgb_to_linear(texture(sIrrmap, vec3(envMatrix * vec4(normal, 0.0))).rgb);
+	vec3 diffEnvLighting = kD * baseColor.rgb * diffEnvColor;
 	emissiveColor.rgb += specEnvLighting + diffEnvLighting;
 
 

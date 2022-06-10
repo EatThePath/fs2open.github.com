@@ -1,5 +1,6 @@
 //!#version 150
-#define M_PI 3.1415926535897932384626433832795
+#include "gamma.sdr" //! #include "gamma.sdr"
+#define PI 3.1415926535897932384626433832795
 uniform samplerCube envmap;
 
 layout (std140) uniform genericData {
@@ -174,7 +175,7 @@ void main() {
 		float PdotD = dot(points[i], fragDir);
 		float aPdotD = abs(PdotD);
 		vec3 sampDir = points[i] + (aPdotD - PdotD) * fragDir;
-		fragCol += aPdotD * vec4(texture(envmap, sampDir).rgb, 1.0);
+		fragCol += aPdotD * vec4(srgb_to_linear(texture(envmap, sampDir)).rgb, 1.0);
 	}
-	fragOut0 = fragCol/128;
+	fragOut0 = linear_to_srgb(PI * fragCol * (1.0/128));
 }
