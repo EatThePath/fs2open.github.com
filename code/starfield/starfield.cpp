@@ -3019,8 +3019,9 @@ void stars_setup_environment_mapping(camid cid) {
 		bm_set_render_target(previous_target);
 		g3_set_view_matrix(&cam_pos, &cam_orient, old_zoom);
 	}
-	// Draw irr map if we've just updated the envmap or otherwise invalidated.
-	if (!Irr_cubemap_drawn || renderEnv) {
+	// Draw irr map if we've just updated the envmap 
+	// or otherwise invalidated the irradiance map (i.e. custom/default envmap)
+	if ((!Irr_cubemap_drawn || renderEnv) && (ENVMAP >= 0)) {
 		// Generate irradiance map.
 		if (gr_screen.irrmap_render_target < 0) {
 			irradiance_map_gen();
