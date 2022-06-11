@@ -172,6 +172,10 @@ void main() {
 	fragDir = normalize(fragDir);
 	for(int i=0;i<128;++i)
 	{
+		// This precalcualted sampling method seems weird, but by having a set of fixed directions
+		// and mirroring the bad ones onto the correct side of the normal means that
+		// approximately 50% of envmap texture samples (the non-mirrored ones) 
+		// are shared between adjacent fragments, improving texture cache hit rate.
 		float PdotD = dot(points[i], fragDir);
 		float aPdotD = abs(PdotD);
 		vec3 sampDir = points[i] + (aPdotD - PdotD) * fragDir;
