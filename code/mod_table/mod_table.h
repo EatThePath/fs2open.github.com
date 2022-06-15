@@ -11,6 +11,7 @@
 #include "globalincs/pstypes.h"
 #include "globalincs/systemvars.h"
 #include "graphics/2d.h"
+#include "hud/hudtarget.h"
 
 extern int Directive_wait_time;
 extern bool True_loop_argument_sexps;
@@ -81,6 +82,7 @@ extern bool Show_subtitle_uses_pixels;
 extern int Show_subtitle_screen_base_res[];
 extern int Show_subtitle_screen_adjusted_res[];
 extern bool Always_warn_player_about_unbound_keys;
+extern leadIndicatorBehavior Lead_indicator_behavior;
 
 void mod_table_init();
 void mod_table_post_process();
