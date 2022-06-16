@@ -92,6 +92,7 @@ bool Show_subtitle_uses_pixels;
 int Show_subtitle_screen_base_res[2];
 int Show_subtitle_screen_adjusted_res[2];
 bool Always_warn_player_about_unbound_keys;
+leadIndicatorBehavior Lead_indicator_behavior;
 
 void mod_table_set_version_flags();
 
@@ -800,6 +801,30 @@ void parse_mod_table(const char *filename)
 			stuff_boolean(&Custom_briefing_icons_always_override_standard_icons);
 		}
 
+		if (optional_string("$Lead indicator behavior:")){
+			SCP_string temp;
+			stuff_string(temp, F_RAW);
+			SCP_tolower(temp);
+
+			if (temp == "default")
+			{
+				Lead_indicator_behavior = leadIndicatorBehavior::DEFAULT;
+			}
+			else if (temp == "multiple")
+			{
+				Lead_indicator_behavior = leadIndicatorBehavior::MULTIPLE;
+			}
+			else if (temp == "average")
+			{
+				Lead_indicator_behavior = leadIndicatorBehavior::AVERAGE;
+			}
+			else
+			{
+				Warning(LOCATION, "$Lead indicator behavior: Invalid selection. Must be default, multiple or average. Reverting to default.");
+				Lead_indicator_behavior = leadIndicatorBehavior::DEFAULT;
+			}
+		}
+
 		required_string("#END");
 	}
 	catch (const parse::ParseException& e)
@@ -921,6 +946,7 @@ void mod_table_reset()
 	Show_subtitle_screen_adjusted_res[0] = -1;
 	Show_subtitle_screen_adjusted_res[1] = -1;
 	Always_warn_player_about_unbound_keys = false;
+	Lead_indicator_behavior = leadIndicatorBehavior::DEFAULT;
 }
 
 void mod_table_set_version_flags()
