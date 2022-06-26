@@ -1599,7 +1599,7 @@ int bm_load_animation(const char *real_filename, int *nframes, int *fps, int *ke
 				throw e;
 			}
 			else {
-				mprintf(("Failed to load apng: %s\n", e.what()));
+				nprintf(("apng", "Failed to load apng: %s\n", e.what()));
 				return -1;
 			}
 		}

@@ -7543,7 +7543,7 @@ int mission_do_departure(object *objp, bool goal_is_to_warp)
 	ship *shipp = &Ships[objp->instance];
 	ai_info *aip = &Ai_info[shipp->ai_index];
 
-	mprintf(("Entered mission_do_departure() for %s\n", shipp->ship_name));
+	nprintf(("Departure", "Entered mission_do_departure() for %s\n", shipp->ship_name));
 
 	if (OnDepartureStartedHook->isActive())
 	{
@@ -7564,12 +7564,12 @@ int mission_do_departure(object *objp, bool goal_is_to_warp)
 		// aha, but not if we were ORDERED to depart, because the comms menu ALSO uses the goal code, and yet the comms menu means any departure method!
 		if ((shipp->flags[Ship::Ship_Flags::Departure_ordered]) || ((shipp->wingnum >= 0) && (Wings[shipp->wingnum].flags[Ship::Wing_Flags::Departure_ordered])))
 		{
-			mprintf(("Looks like we were ordered to depart; initiating the standard departure logic\n"));
+			nprintf(("Departure", "Looks like we were ordered to depart; initiating the standard departure logic\n"));
 		}
 		// since our goal is to warp, then if we can warp, jump directly to the warping part
 		else if (ship_can_warp_full_check(shipp))
 		{
-			mprintf(("Our current goal is to warp!  Trying to warp...\n"));
+			nprintf(("Departure","Our current goal is to warp!  Trying to warp...\n"));
 			goto try_to_warp;
 		}
 		// otherwise, since we can't warp, we'll do the standard bay departure check, etc.
@@ -7604,7 +7604,7 @@ int mission_do_departure(object *objp, bool goal_is_to_warp)
 		// see if ship is yet to arrive.  If so, then warp.
 		if (mission_check_ship_yet_to_arrive(name))
 		{
-			mprintf(("Anchor ship %s hasn't arrived yet!  Trying to warp...\n", name));
+			nprintf(("Departure","Anchor ship %s hasn't arrived yet!  Trying to warp...\n", name));
 			goto try_to_warp;
 		}
 
@@ -7613,14 +7613,14 @@ int mission_do_departure(object *objp, bool goal_is_to_warp)
 		anchor_shipnum = ship_name_lookup(name);
 		if (anchor_shipnum < 0)
 		{
-			mprintf(("Anchor ship %s not found!  Trying to warp...\n", name));
+			nprintf(("Departure","Anchor ship %s not found!  Trying to warp...\n", name));
 			goto try_to_warp;
 		}
 
 		// see if we can actually depart to the ship
 		if (!ship_useful_for_departure(anchor_shipnum, shipp->departure_path_mask))
 		{
-			mprintf(("Anchor ship %s not suitable for departure (dying, departing, bays destroyed, etc.).  Trying to warp...\n", name));
+			nprintf(("Departure","Anchor ship %s not suitable for departure (dying, departing, bays destroyed, etc.).  Trying to warp...\n", name));
 			goto try_to_warp;
 		}
 
@@ -7629,7 +7629,7 @@ int mission_do_departure(object *objp, bool goal_is_to_warp)
 		{
 			MONITOR_INC(NumShipDepartures,1);
 
-			mprintf(("Acquired departure path\n"));
+			nprintf(("Departure","Acquired departure path\n"));
 			return 1;
 		}
 	}
@@ -7639,7 +7639,7 @@ try_to_warp:
 	// make sure we can actually warp
 	if (ship_can_warp_full_check(shipp))
 	{
-		mprintf(("Setting mode to warpout\n"));
+		nprintf(("Departure","Setting mode to warpout\n"));
 
 		ai_set_mode_warp_out(objp, aip);
 		MONITOR_INC(NumShipDepartures,1);
@@ -7656,7 +7656,7 @@ try_to_warp:
 		// 2) A support ship has had its hull fall to 25% when it has no repair targets
 		// 3) A fighter or bomber with an IFF that doesn't allow support ships has its warp_out_timestamp elapse (but this seems to not be a possibility anymore)
 		// 4) An instructor in a training mission has been fired upon
-		mprintf(("Can't warp!  Doing something else instead.\n"));
+		nprintf(("Departure","Can't warp!  Doing something else instead.\n"));
 
         shipp->flags.remove(Ship::Ship_Flags::Depart_dockbay);
         shipp->flags.remove(Ship::Ship_Flags::Depart_warp);

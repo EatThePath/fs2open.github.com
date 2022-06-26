@@ -1212,14 +1212,14 @@ bool pilotfile_convert::csg_convert(const char *fname, bool inferno)
 	             CF_LOCATION_ROOT_USER | CF_LOCATION_ROOT_GAME | CF_LOCATION_TYPE_ROOT);
 
 	if ( !cfp ) {
-		mprintf(("    CSG => Unable to open '%s' for export!\n", fname));
+		nprintf(("CSG", "    CSG => Unable to open '%s' for export!\n", fname));
 		return false;
 	}
 
 	try {
 		csg_export();
 	} catch (const char *err) {
-		mprintf(("    CSG => Export ERROR: %s\n", err));
+		nprintf(("CSG", "    CSG => Export ERROR: %s\n", err));
 		rval = false;
 	}
 
@@ -1230,7 +1230,7 @@ bool pilotfile_convert::csg_convert(const char *fname, bool inferno)
 	csg = NULL;
 
 	if (rval) {
-		mprintf(("    CSG => Conversion complete!\n"));
+		nprintf(("CSG", "    CSG => Conversion complete!\n"));
 	}
 
 	return rval;

@@ -199,7 +199,7 @@ void model_unload(int modelnum, int force)
 	if (!force && (--pm->used_this_mission > 0))
 		return;
 
-	mprintf(("Unloading model '%s' from slot '%i'\n", pm->filename, num));
+	nprintf(("Model", "Unloading model '%s' from slot '%i'\n", pm->filename, num));
 
 	// so that the textures can be released
 	pm->used_this_mission = 0;
@@ -387,7 +387,7 @@ void model_free_all()
 		return;
 	}
 
-	mprintf(( "Freeing all existing models...\n" ));
+	nprintf(("Model",  "Freeing all existing models...\n" ));
 	model_instance_free_all();
 
 	for (i=0;i<MAX_POLYGON_MODELS;i++) {
@@ -422,7 +422,7 @@ void model_page_in_start()
 		return;
 	}
 
-	mprintf(( "Starting model page in...\n" ));
+	nprintf(("Model",  "Starting model page in...\n" ));
 
 	for (i=0; i<MAX_POLYGON_MODELS; i++) {
 		if (Polygon_models[i] != NULL)
@@ -436,7 +436,7 @@ void model_page_in_stop()
 
 	Assert( model_initted );
 
-	mprintf(( "Stopping model page in...\n" ));
+	nprintf(("Model",  "Stopping model page in...\n" ));
 
 	for (i=0; i<MAX_POLYGON_MODELS; i++) {
 		if (Polygon_models[i] == NULL)
@@ -730,7 +730,7 @@ static void set_subsystem_info(int model_num, model_subsystem *subsystemp, char 
 		subsystemp->type = SUBSYSTEM_ACTIVATION;
 	}  else { // If unrecognized type, set to unknown so artist can continue working...
 		subsystemp->type = SUBSYSTEM_UNKNOWN;
-		mprintf(("Subsystem '%s' on ship %s is not recognized as a common subsystem type\n", dname, model_get(model_num)->filename));
+		nprintf(("Model", "Subsystem '%s' on ship %s is not recognized as a common subsystem type\n", dname, model_get(model_num)->filename));
 	}
 
 	if (in(props, "$triggered")) {
@@ -2975,7 +2975,7 @@ int model_load(const  char *filename, int n_subsystems, model_subsystem *subsyst
 
 	TRACE_SCOPE(tracing::LoadModelFile);
 
-	mprintf(( "Loading model '%s' into slot '%i'\n", filename, num ));
+	nprintf(("Model",  "Loading model '%s' into slot '%i'\n", filename, num ));
 
 	pm = new polymodel;	
 	Polygon_models[num] = pm;
@@ -3158,7 +3158,7 @@ int model_load(const  char *filename, int n_subsystems, model_subsystem *subsyst
 					dl2--;	// Start from 1 up...
 					if (dl2 >= sm1->num_details ) sm1->num_details = dl2+1;
 					sm1->details[dl2] = j;
-  				    mprintf(( "Submodel '%s' is detail level %d of '%s'\n", sm2->name, dl2 + 1, sm1->name ));
+  				    nprintf(("Model",  "Submodel '%s' is detail level %d of '%s'\n", sm2->name, dl2 + 1, sm1->name ));
 				}
 			}
 		}

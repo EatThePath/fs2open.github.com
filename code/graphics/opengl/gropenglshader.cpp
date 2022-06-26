@@ -389,7 +389,7 @@ static SCP_string opengl_load_shader(const char* filename) {
 	}
 
 	//If we're still here, proceed with internals
-	mprintf(("   Loading built-in default shader for: %s\n", filename));
+	nprintf(("Shaders", "   Loading built-in default shader for: %s\n", filename));
 	auto def_shader = defaults_get_file(filename);
 	content.assign(reinterpret_cast<const char*>(def_shader.data), def_shader.size);
 
@@ -553,13 +553,13 @@ static bool load_cached_shader_binary(opengl::ShaderProgram* program, const SCP_
 
 	auto metadata_root = json_loads(metadata_content.c_str(), 0, nullptr);
 	if (!metadata_root) {
-		mprintf(("Loading of cache metadata failed! Falling back to GLSL shader...\n"));
+		nprintf(("Shaders", "Loading of cache metadata failed! Falling back to GLSL shader...\n"));
 		return false;
 	}
 
 	json_int_t format;
 	if (json_unpack(metadata_root, "{sI}", "format", &format) != 0) {
-		mprintf(("Failed to unpack values from metadata JSON! Falling back to GLSL shader...\n"));
+		nprintf(("Shaders", "Failed to unpack values from metadata JSON! Falling back to GLSL shader...\n"));
 		return false;
 	}
 	auto binary_format = (GLenum) format;
@@ -646,13 +646,13 @@ static void cache_program_binary(GLuint program, const SCP_string& hash) {
 	auto metadata_fp = cfopen(metadata_name.c_str(), "wb", CFILE_NORMAL, CF_TYPE_CACHE, false,
 	                          CF_LOCATION_ROOT_USER | CF_LOCATION_ROOT_GAME | CF_LOCATION_TYPE_ROOT);
 	if (!metadata_fp) {
-		mprintf(("Could not open shader cache metadata file!\n"));
+		nprintf(("Shaders", "Could not open shader cache metadata file!\n"));
 		return;
 	}
 
 	auto metadata = json_pack("{sI}", "format", (json_int_t)binary_fmt);
 	if (json_dump_callback(metadata, json_write_callback, metadata_fp, 0) != 0) {
-		mprintf(("Failed to write shader cache metadata file!\n"));
+		nprintf(("Shaders", "Failed to write shader cache metadata file!\n"));
 		cfclose(metadata_fp);
 		return;
 	}
@@ -662,7 +662,7 @@ static void cache_program_binary(GLuint program, const SCP_string& hash) {
 	auto binary_fp = cfopen(binary_name.c_str(), "wb", CFILE_NORMAL, CF_TYPE_CACHE, false,
 	                        CF_LOCATION_ROOT_USER | CF_LOCATION_ROOT_GAME | CF_LOCATION_TYPE_ROOT);
 	if (!binary_fp) {
-		mprintf(("Could not open shader cache binary file!\n"));
+		nprintf(("Shaders", "Could not open shader cache binary file!\n"));
 		return;
 	}
 	cfwrite(binary.data(), 1, (int) binary.size(), binary_fp);
@@ -695,8 +695,8 @@ void opengl_compile_shader_actual(shader_type sdr, const uint &flags, opengl_sha
 	opengl_shader_type_t *sdr_info = &GL_shader_types[sdr];
 
 	Assert(sdr_info->type_id == sdr);
-	mprintf(("Compiling new shader:\n"));
-	mprintf(("	%s\n", sdr_info->description));
+	nprintf(("Shaders", "Compiling new shader:\n"));
+	nprintf(("Shaders", "	%s\n", sdr_info->description));
 
 	// figure out if the variant requested needs a geometry shader
 	bool use_geo_sdr = false;
@@ -786,7 +786,7 @@ void opengl_compile_shader_actual(shader_type sdr, const uint &flags, opengl_sha
 		}
 	}
 
-	mprintf(("Shader Variant Features:\n"));
+	nprintf(("Shaders", "Shader Variant Features:\n"));
 
 	// initialize all uniforms and attributes that are specific to this variant
 	for (int i = 0; i < GL_num_shader_variants; ++i) {
@@ -798,7 +798,7 @@ void opengl_compile_shader_actual(shader_type sdr, const uint &flags, opengl_sha
 				new_shader.program->initAttribute(attr_info.name, attr_info.attribute_id, attr_info.default_value);
 			}
 
-			mprintf(("	%s\n", variant.description));
+			nprintf(("Shaders", "	%s\n", variant.description));
 		}
 	}
 
@@ -958,10 +958,10 @@ void opengl_shader_init()
 	gr_opengl_maybe_create_shader(SDR_TYPE_DEFERRED_CLEAR, 0);
 
 	// compile passthrough shader
-	mprintf(("Compiling passthrough shader...\n"));
+	nprintf(("Shaders", "Compiling passthrough shader...\n"));
 	gr_opengl_maybe_create_shader(SDR_TYPE_PASSTHROUGH_RENDER, 0);
 
-	mprintf(("\n"));
+	nprintf(("Shaders", "\n"));
 }
 
 /**

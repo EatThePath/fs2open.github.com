@@ -986,14 +986,14 @@ bool pilotfile::load_player(const char* callsign, player* _p, bool force_binary)
 	}
 
 	if ( filename.size() == 4 ) {
-		mprintf(("PLR => Invalid filename '%s'!\n", filename.c_str()));
+		nprintf(("PLR", "    PLR => Invalid filename '%s'!\n", filename.c_str()));
 		return false;
 	}
 
 	auto fp = cfopen(filename.c_str(), "rb", CFILE_NORMAL, CF_TYPE_PLAYERS, false,
 	                 CF_LOCATION_ROOT_USER | CF_LOCATION_ROOT_GAME | CF_LOCATION_TYPE_ROOT);
 	if ( !fp ) {
-		mprintf(("PLR => Unable to open '%s' for reading!\n", filename.c_str()));
+		nprintf(("PLR", "    PLR => Unable to open '%s' for reading!\n", filename.c_str()));
 		return false;
 	}
 
@@ -1003,7 +1003,7 @@ bool pilotfile::load_player(const char* callsign, player* _p, bool force_binary)
 		try {
 			handler.reset(new pilot::JSONFileHandler(fp, true));
 		} catch (const std::exception& e) {
-			mprintf(("PLR => Failed to parse JSON: %s\n", e.what()));
+			nprintf(("PLR", "    PLR => Failed to parse JSON: %s\n", e.what()));
 			return false;
 		}
 	}
@@ -1011,7 +1011,7 @@ bool pilotfile::load_player(const char* callsign, player* _p, bool force_binary)
 	unsigned int plr_id = handler->readUInt("signature");
 
 	if (plr_id != PLR_FILE_ID) {
-		mprintf(("PLR => Invalid header id for '%s'!\n", filename.c_str()));
+		nprintf(("PLR", "    PLR => Invalid header id for '%s'!\n", filename.c_str()));
 		plr_close();
 		return false;
 	}
@@ -1019,7 +1019,7 @@ bool pilotfile::load_player(const char* callsign, player* _p, bool force_binary)
 	// version, now used
 	plr_ver = handler->readUByte("version");
 
-	mprintf(("PLR => Loading '%s' with version %d...\n", filename.c_str(), plr_ver));
+	nprintf(("PLR", "    PLR => Loading '%s' with version %d...\n", filename.c_str(), plr_ver));
 
 	//true resets everything, false sets up file verify.
 	plr_reset_data(true);
@@ -1031,52 +1031,52 @@ bool pilotfile::load_player(const char* callsign, player* _p, bool force_binary)
 		try {
 			switch (section_id) {
 				case Section::Flags:
-					mprintf(("PLR => Parsing:  Flags...\n"));
+					nprintf(("PLR", "    PLR => Parsing:  Flags...\n"));
 					plr_read_flags();
 					break;
 
 				case Section::Info:
-					mprintf(("PLR => Parsing:  Info...\n"));
+					nprintf(("PLR", "    PLR => Parsing:  Info...\n"));
 					plr_read_info();
 					break;
 
 				case Section::Variables:
-					mprintf(("PLR => Parsing:  Variables...\n"));
+					nprintf(("PLR", "    PLR => Parsing:  Variables...\n"));
 					plr_read_variables();
 					break;
 
 				case Section::Containers:
-					mprintf(("PLR => Parsing:  Containers...\n"));
+					nprintf(("PLR", "    PLR => Parsing:  Containers...\n"));
 					plr_read_containers();
 					break;
 
 				case Section::HUD:
-					mprintf(("PLR => Parsing:  HUD...\n"));
+					nprintf(("PLR", "    PLR => Parsing:  HUD...\n"));
 					plr_read_hud();
 					break;
 
 				case Section::Scoring:
-					mprintf(("PLR => Parsing:  Scoring...\n"));
+					nprintf(("PLR", "    PLR => Parsing:  Scoring...\n"));
 					plr_read_stats();
 					break;
 
 				case Section::ScoringMulti:
-					mprintf(("PLR => Parsing:  ScoringMulti...\n"));
+					nprintf(("PLR", "    PLR => Parsing:  ScoringMulti...\n"));
 					plr_read_stats_multi();
 					break;
 
 				case Section::Multiplayer:
-					mprintf(("PLR => Parsing:  Multiplayer...\n"));
+					nprintf(("PLR", "    PLR => Parsing:  Multiplayer...\n"));
 					plr_read_multiplayer();
 					break;
 
 				case Section::Controls:
-					mprintf(("PLR => Parsing:  Controls...\n"));
+					nprintf(("PLR", "    PLR => Parsing:  Controls...\n"));
 					plr_read_controls();
 					break;
 
 				case Section::Settings:
-					mprintf(("PLR => Parsing:  Settings...\n"));
+					nprintf(("PLR", "    PLR => Parsing:  Settings...\n"));
 					plr_read_settings();
 					break;
 
@@ -1085,15 +1085,15 @@ bool pilotfile::load_player(const char* callsign, player* _p, bool force_binary)
 					return false;
 
 				default:
-					mprintf(("PLR => Skipping unknown section 0x%04x!\n", (uint32_t)section_id));
+					nprintf(("PLR", "    PLR => Skipping unknown section 0x%04x!\n", (uint32_t)section_id));
 					break;
 			}
 		} catch (const cfile::max_read_length &msg) {
 			// read to max section size, move to next section, discarding
 			// extra/unknown data
-			mprintf(("PLR => (0x%04x) %s\n", (uint32_t)section_id, msg.what()));
+			nprintf(("PLR", "    PLR => (0x%04x) %s\n", (uint32_t)section_id, msg.what()));
 		} catch (const char *err) {
-			mprintf(("PLR => ERROR: %s\n", err));
+			nprintf(("PLR", "    PLR => ERROR: %s\n", err));
 			plr_close();
 			return false;
 		}
@@ -1123,7 +1123,7 @@ bool pilotfile::load_player(const char* callsign, player* _p, bool force_binary)
 		p->flags |= PLAYER_FLAGS_PLR_VER_IS_HIGHER;
 	}
 
-	mprintf(("PLR => Loading complete!\n"));
+	nprintf(("PLR", "    PLR => Loading complete!\n"));
 	if (OnPlayerLoadedHook->isActive()) {
 		OnPlayerLoadedHook->run(scripting::hook_param_list(scripting::hook_param("Player", 'o', scripting::api::l_Player.Set(scripting::api::player_h(p)))));
 	}
@@ -1155,7 +1155,7 @@ bool pilotfile::save_player(player *_p)
 
 	filename = p->callsign;
 	if ( filename.empty() ) {
-		mprintf(("PLR => Invalid filename '%s'!\n", filename.c_str()));
+		nprintf(("PLR", "    PLR => Invalid filename '%s'!\n", filename.c_str()));
 		return false;
 	}
 
@@ -1167,14 +1167,14 @@ bool pilotfile::save_player(player *_p)
 	                 CF_LOCATION_ROOT_USER | CF_LOCATION_ROOT_GAME | CF_LOCATION_TYPE_ROOT);
 
 	if ( !fp ) {
-		mprintf(("PLR => Unable to open '%s' for saving!\n", filename.c_str()));
+		nprintf(("PLR", "    PLR => Unable to open '%s' for saving!\n", filename.c_str()));
 		return false;
 	}
 
 	try {
 		handler.reset(new pilot::JSONFileHandler(fp, false));
 	} catch (const std::exception& e) {
-		mprintf(("PLR => Failed to parse JSON: %s\n", e.what()));
+		nprintf(("PLR", "    PLR => Failed to parse JSON: %s\n", e.what()));
 		return false;
 	}
 
@@ -1182,32 +1182,32 @@ bool pilotfile::save_player(player *_p)
 	handler->writeInt("signature", PLR_FILE_ID);
 	handler->writeUByte("version", PLR_VERSION);
 
-	mprintf(("PLR => Saving '%s' with version %d...\n", filename.c_str(), (int)PLR_VERSION));
+	nprintf(("PLR", "    PLR => Saving '%s' with version %d...\n", filename.c_str(), (int)PLR_VERSION));
 
 	handler->beginWritingSections();
 
 	// flags and info sections go first
-	mprintf(("PLR => Saving:  Flags...\n"));
+	nprintf(("PLR", "    PLR => Saving:  Flags...\n"));
 	plr_write_flags();
-	mprintf(("PLR => Saving:  Info...\n"));
+	nprintf(("PLR", "    PLR => Saving:  Info...\n"));
 	plr_write_info();
 
 	// everything else is next, not order specific
-	mprintf(("PLR => Saving:  Scoring...\n"));
+	nprintf(("PLR", "    PLR => Saving:  Scoring...\n"));
 	plr_write_stats();
-	mprintf(("PLR => Saving:  ScoringMulti...\n"));
+	nprintf(("PLR", "    PLR => Saving:  ScoringMulti...\n"));
 	plr_write_stats_multi();
-	mprintf(("PLR => Saving:  HUD...\n"));
+	nprintf(("PLR", "    PLR => Saving:  HUD...\n"));
 	plr_write_hud();
-	mprintf(("PLR => Saving:  Variables...\n"));
+	nprintf(("PLR", "    PLR => Saving:  Variables...\n"));
 	plr_write_variables();
-	mprintf(("PLR => Saving:  Containers...\n"));
+	nprintf(("PLR", "    PLR => Saving:  Containers...\n"));
 	plr_write_containers();
-	mprintf(("PLR => Saving:  Multiplayer...\n"));
+	nprintf(("PLR", "    PLR => Saving:  Multiplayer...\n"));
 	plr_write_multiplayer();
-	mprintf(("PLR => Saving:  Controls...\n"));
+	nprintf(("PLR", "    PLR => Saving:  Controls...\n"));
 	plr_write_controls();
-	mprintf(("PLR => Saving:  Settings...\n"));
+	nprintf(("PLR", "    PLR => Saving:  Settings...\n"));
 	plr_write_settings();
 
 	handler->endWritingSections();
@@ -1215,7 +1215,7 @@ bool pilotfile::save_player(player *_p)
 	handler->flush();
 
 	// Done!
-	mprintf(("PLR => Saving complete!\n"));
+	nprintf(("PLR", "    PLR => Saving complete!\n"));
 
 	plr_close();
 
@@ -1232,7 +1232,7 @@ bool pilotfile::verify(const char *fname, int *rank, char *valid_language, int* 
 	filename = fname;
 
 	if ( filename.size() == 4 ) {
-		mprintf(("PLR => Invalid filename '%s'!\n", filename.c_str()));
+		nprintf(("PLR", "    PLR => Invalid filename '%s'!\n", filename.c_str()));
 		return false;
 	}
 
@@ -1240,21 +1240,21 @@ bool pilotfile::verify(const char *fname, int *rank, char *valid_language, int* 
 	                 CF_LOCATION_ROOT_USER | CF_LOCATION_ROOT_GAME | CF_LOCATION_TYPE_ROOT);
 
 	if ( !fp ) {
-		mprintf(("PLR => Unable to open '%s'!\n", filename.c_str()));
+		nprintf(("PLR", "    PLR => Unable to open '%s'!\n", filename.c_str()));
 		return false;
 	}
 
 	try {
 		handler.reset(new pilot::JSONFileHandler(fp, true));
 	} catch (const std::exception& e) {
-		mprintf(("PLR => Failed to parse JSON: %s\n", e.what()));
+		nprintf(("PLR", "    PLR => Failed to parse JSON: %s\n", e.what()));
 		return false;
 	}
 
 	unsigned int plr_id = handler->readUInt("signature");
 
 	if (plr_id != PLR_FILE_ID) {
-		mprintf(("PLR => Invalid header id for '%s'!\n", filename.c_str()));
+		nprintf(("PLR", "    PLR => Invalid header id for '%s'!\n", filename.c_str()));
 		plr_close();
 		return false;
 	}
@@ -1262,7 +1262,7 @@ bool pilotfile::verify(const char *fname, int *rank, char *valid_language, int* 
 	// version, now used
 	plr_ver = handler->readUByte("version");
 
-	mprintf(("PLR => Verifying '%s' with version %d...\n", filename.c_str(), plr_ver));
+	nprintf(("PLR", "    PLR => Verifying '%s' with version %d...\n", filename.c_str(), plr_ver));
 
 	// true resets everything, false sets up file verify.
 	plr_reset_data(false);
@@ -1276,7 +1276,7 @@ bool pilotfile::verify(const char *fname, int *rank, char *valid_language, int* 
 		try {
 			switch (section_id) {
 				case Section::Flags:
-					mprintf(("PLR => Parsing:  Flags...\n"));
+					nprintf(("PLR", "    PLR => Parsing:  Flags...\n"));
 					have_flags = true;
 					plr_read_flags();
 					break;
@@ -1284,7 +1284,7 @@ bool pilotfile::verify(const char *fname, int *rank, char *valid_language, int* 
 				// now reading the Info section to get the campaign
 				// and be able to lookup the campaign rank
 				case Section::Info:
-					mprintf(("PLR => Parsing:  Info...\n"));
+					nprintf(("PLR", "    PLR => Parsing:  Info...\n"));
 					have_info = true;
 					plr_read_info();
 					break;
@@ -1299,9 +1299,9 @@ bool pilotfile::verify(const char *fname, int *rank, char *valid_language, int* 
 		} catch (cfile::max_read_length &msg) {
 			// read to max section size, move to next section, discarding
 			// extra/unknown data
-			mprintf(("PLR => (0x%04x) %s\n", (uint32_t)section_id, msg.what()));
+			nprintf(("PLR", "    PLR => (0x%04x) %s\n", (uint32_t)section_id, msg.what()));
 		} catch (const char *err) {
-			mprintf(("PLR => ERROR: %s\n", err));
+			nprintf(("PLR", "    PLR => ERROR: %s\n", err));
 			plr_close();
 			return false;
 		}
@@ -1353,7 +1353,7 @@ bool pilotfile::verify(const char *fname, int *rank, char *valid_language, int* 
 		}
 	}
 
-	mprintf(("PLR => Verifying complete!\n"));
+	nprintf(("PLR", "    PLR => Verifying complete!\n"));
 
 	return true;
 }
