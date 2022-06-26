@@ -137,7 +137,7 @@ Section pilot::BinaryFileHandler::nextSection() {
 		// There was a previous section
 		auto current = (size_t)cftell(_cfp);
 		if (current != _section_end_pos) {
-			mprintf(("PLR => WARNING: Advancing to the next section. " SIZE_T_ARG " bytes were skipped!\n", _section_end_pos - current));
+			nprintf(("PLR", "    PLR => WARNING: Advancing to the next section. " SIZE_T_ARG " bytes were skipped!\n", _section_end_pos - current));
 			cfseek(_cfp, (int)_section_end_pos, CF_SEEK_SET);
 		}
 

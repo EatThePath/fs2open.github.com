@@ -69,7 +69,8 @@ static int model_initted = 0;
 CFILE *ss_fp = NULL;			// file pointer used to dump subsystem information
 char  model_filename[_MAX_PATH];		// temp used to store filename
 char	debug_name[_MAX_PATH];
-int ss_warning_shown = 0;		// have we shown the warning dialog concerning the subsystems?
+static bool ss_warning_shown_null = false;		// have we shown the warning dialog concerning the subsystems?
+static bool ss_warning_shown_mismatch = false;	// ditto but for a different warning
 #endif
 
 static uint Global_checksum = 0;
@@ -198,7 +199,7 @@ void model_unload(int modelnum, int force)
 	if (!force && (--pm->used_this_mission > 0))
 		return;
 
-	mprintf(("Unloading model '%s' from slot '%i'\n", pm->filename, num));
+	nprintf(("Model", "Unloading model '%s' from slot '%i'\n", pm->filename, num));
 
 	// so that the textures can be released
 	pm->used_this_mission = 0;
@@ -386,7 +387,7 @@ void model_free_all()
 		return;
 	}
 
-	mprintf(( "Freeing all existing models...\n" ));
+	nprintf(("Model",  "Freeing all existing models...\n" ));
 	model_instance_free_all();
 
 	for (i=0;i<MAX_POLYGON_MODELS;i++) {
@@ -421,7 +422,7 @@ void model_page_in_start()
 		return;
 	}
 
-	mprintf(( "Starting model page in...\n" ));
+	nprintf(("Model",  "Starting model page in...\n" ));
 
 	for (i=0; i<MAX_POLYGON_MODELS; i++) {
 		if (Polygon_models[i] != NULL)
@@ -435,7 +436,7 @@ void model_page_in_stop()
 
 	Assert( model_initted );
 
-	mprintf(( "Stopping model page in...\n" ));
+	nprintf(("Model",  "Stopping model page in...\n" ));
 
 	for (i=0; i<MAX_POLYGON_MODELS; i++) {
 		if (Polygon_models[i] == NULL)
@@ -729,7 +730,7 @@ static void set_subsystem_info(int model_num, model_subsystem *subsystemp, char 
 		subsystemp->type = SUBSYSTEM_ACTIVATION;
 	}  else { // If unrecognized type, set to unknown so artist can continue working...
 		subsystemp->type = SUBSYSTEM_UNKNOWN;
-		mprintf(("Subsystem '%s' on ship %s is not recognized as a common subsystem type\n", dname, model_get(model_num)->filename));
+		nprintf(("Model", "Subsystem '%s' on ship %s is not recognized as a common subsystem type\n", dname, model_get(model_num)->filename));
 	}
 
 	if (in(props, "$triggered")) {
@@ -882,9 +883,9 @@ void do_new_subsystem( int n_subsystems, model_subsystem *slist, int subobj_num,
 
 	if ( slist==NULL ) {
 #ifndef NDEBUG
-		if (!ss_warning_shown) {
+		if (!ss_warning_shown_null) {
 			mprintf(("No subsystems found for model \"%s\".\n", model_get(model_num)->filename));
-			ss_warning_shown = 1;
+			ss_warning_shown_null = true;
 		}
 #endif
 		return;			// For TestCode, POFView, etc don't bother
@@ -924,12 +925,12 @@ void do_new_subsystem( int n_subsystems, model_subsystem *slist, int subobj_num,
 #ifndef NDEBUG
 	char bname[_MAX_FNAME];
 
-	if ( !ss_warning_shown) {
+	if ( !ss_warning_shown_mismatch) {
 		_splitpath(model_filename, NULL, NULL, bname, NULL);
 		// Lets still give a comment about it and not just erase it
 		Warning(LOCATION,"Not all subsystems in model \"%s\" have a record in ships.tbl.\nThis can cause game to crash.\n\nList of subsystems not found from table is in log file.\n", model_get(model_num)->filename );
 		mprintf(("Subsystem %s in model %s was not found in ships.tbl!\n", subobj_name, model_get(model_num)->filename));
-		ss_warning_shown = 1;
+		ss_warning_shown_mismatch = true;
 	} else
 #endif
 		mprintf(("Subsystem %s in model %s was not found in ships.tbl!\n", subobj_name, model_get(model_num)->filename));
@@ -1432,7 +1433,8 @@ int read_model_file(polymodel * pm, const char *filename, int n_subsystems, mode
 			mprintf(( "Can't open debug file for writing subsystems for %s\n", filename));
 		} else {
 			strcpy_s(model_filename, filename);
-			ss_warning_shown = 0;
+			ss_warning_shown_null = false;
+			ss_warning_shown_mismatch = false;
 		}
 	}
 #endif
@@ -2973,7 +2975,7 @@ int model_load(const  char *filename, int n_subsystems, model_subsystem *subsyst
 
 	TRACE_SCOPE(tracing::LoadModelFile);
 
-	mprintf(( "Loading model '%s' into slot '%i'\n", filename, num ));
+	nprintf(("Model",  "Loading model '%s' into slot '%i'\n", filename, num ));
 
 	pm = new polymodel;	
 	Polygon_models[num] = pm;
@@ -3156,7 +3158,7 @@ int model_load(const  char *filename, int n_subsystems, model_subsystem *subsyst
 					dl2--;	// Start from 1 up...
 					if (dl2 >= sm1->num_details ) sm1->num_details = dl2+1;
 					sm1->details[dl2] = j;
-  				    mprintf(( "Submodel '%s' is detail level %d of '%s'\n", sm2->name, dl2 + 1, sm1->name ));
+  				    nprintf(("Model",  "Submodel '%s' is detail level %d of '%s'\n", sm2->name, dl2 + 1, sm1->name ));
 				}
 			}
 		}

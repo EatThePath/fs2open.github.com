@@ -903,14 +903,14 @@ bool pilotfile_convert::plr_convert(const char *fname, bool inferno)
 	             CF_LOCATION_ROOT_USER | CF_LOCATION_ROOT_GAME | CF_LOCATION_TYPE_ROOT);
 
 	if ( !cfp ) {
-		mprintf(("  PLR => Unable to open '%s' for export!\n", fname));
+		nprintf(("PLR", "  PLR => Unable to open '%s' for export!\n", fname));
 		return false;
 	}
 
 	try {
 		plr_export();
 	} catch (const char *err) {
-		mprintf(("  PLR => Export ERROR: %s\n", err));
+		nprintf(("PLR", "  PLR => Export ERROR: %s\n", err));
 		rval = false;
 	}
 
@@ -918,7 +918,7 @@ bool pilotfile_convert::plr_convert(const char *fname, bool inferno)
 	cfp = NULL;
 
 	if (rval) {
-		mprintf(("  PLR => Conversion complete!\n"));
+		nprintf(("PLR", "  PLR => Conversion complete!\n"));
 	}
 
 	return rval;

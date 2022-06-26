@@ -2558,7 +2558,9 @@ void gr_flip(bool execute_scripting)
 		TRACE_SCOPE(tracing::LuaOnFrame);
 
 		// WMC - Do conditional hooks. Yippee!
-		OnFrameHook->run();
+		if (OnFrameHook->isActive()) {
+			OnFrameHook->run();
+		}
 		// WMC - Do scripting reset stuff
 		Script_system.EndFrame();
 	}
