@@ -902,6 +902,7 @@ void game_level_close()
 		lock_time_compression(false);
 
 		audiostream_unpause_all();
+		snd_aav_init();
 
 		gr_set_ambient_light(120, 120, 120);
 
@@ -1192,7 +1193,7 @@ void game_loading_callback(int count)
 
 	Script_system.RemHookVar("Progress");
 
-	os_ignore_events();
+	os_defer_events_on_load_screen();
 
 	if (do_flip)
 		gr_flip();
@@ -5272,7 +5273,6 @@ void game_leave_state( int old_state, int new_state )
 				if ( (Game_mode & GM_MULTIPLAYER) && (new_state == GS_STATE_MAIN_MENU) ){
 					multi_quit_game(PROMPT_NONE);
 				}
-				snd_aav_init();
 
 				freespace_stop_mission();
 
