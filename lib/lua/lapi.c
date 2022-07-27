@@ -161,6 +161,10 @@ LUA_API int lua_gettop (lua_State *L) {
 }
 
 
+LUA_API int lua_stacksize (lua_State *L) {
+  return L->stacksize;
+}
+
 LUA_API void lua_settop (lua_State *L, int idx) {
   lua_lock(L);
   if (idx >= 0) {

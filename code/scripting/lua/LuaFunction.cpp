@@ -162,7 +162,8 @@ void LuaFunction::setReference(const LuaReference& ref) {
 LuaValueList LuaFunction::call(lua_State* L, const LuaValueList& args) const {
 	int err_idx = 0;
 	int stackTop;
-
+	//mprintf(("Beginning lua call, stack %d/%d",lua_gettop(L),lua_stacksize(L)));
+	mprintf(("Beginning lua call, stack %d",lua_gettop(L)));
 	if (_errorFunction) {
 		// push the error function
 		_errorFunction->pushValue(L);
@@ -172,8 +173,11 @@ LuaValueList LuaFunction::call(lua_State* L, const LuaValueList& args) const {
 		stackTop = lua_gettop(L);
 	}
 
-	if(!lua_checkstack(L, (int)args.size() + 1))
+	if(!lua_checkstack(L, (int)args.size() + 1)){
+		//mprintf(("\tOverflow! stack %d/%d\n",lua_gettop(L),lua_stacksize(L)));
+		mprintf(("\tOverflow! stack %d\n",lua_gettop(L)));
 		throw LuaException("Lua Stack Overflow!");
+	}
 
 	// Push the function onto the stack
 	this->pushValue(L, true);
@@ -205,6 +209,8 @@ LuaValueList LuaFunction::call(lua_State* L, const LuaValueList& args) const {
 			lua_pop(L, 1);
 		}
 
+		//mprintf(("\tExit A. stack %d/%d\n",lua_gettop(L),lua_stacksize(L)));
+		mprintf(("\tExit A. stack %d\n",lua_gettop(L)));
 		return values;
 	} else {
 		// Make sure that there is exactly one parameter left on the stack
@@ -228,6 +234,8 @@ LuaValueList LuaFunction::call(lua_State* L, const LuaValueList& args) const {
 		}
 
 		// Throw exception with generated message
+//		mprintf(("\tError! stack %d/%d\n",lua_gettop(L),lua_stacksize(L)));
+		mprintf(("\tError! stack %d\n",lua_gettop(L)));
 		throw LuaException(err_msg);
 	}
 }

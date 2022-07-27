@@ -287,6 +287,7 @@ template <typename T>
 bool script_state::EvalStringWithReturn(const char* string, const char* format, T* rtn, const char* debug_str)
 {
 	using namespace luacpp;
+	mprintf(("EvalStringWithReturn start, lua stack: %d\n",lua_gettop(LuaState)));
 
 	size_t string_size = strlen(string);
 	char lastchar      = string[string_size - 1];
@@ -337,14 +338,18 @@ bool script_state::EvalStringWithReturn(const char* string, const char* format, 
 				scripting::ade_get_args(LuaState, format, rtn);
 			}
 		} catch (const LuaException&) {
+			mprintf(("EvalStringWithReturn inner exception, lua stack: %d\n",lua_gettop(LuaState)));
+			lua_pop(LuaState, 1);
 			return false;
 		}
 	} catch (const LuaException& e) {
 		LuaError(GetLuaSession(), "%s", e.what());
-
+		mprintf(("EvalStringWithReturn outer exception, lua stack: %d\n",lua_gettop(LuaState)));
+		lua_pop(LuaState, 1);
 		return false;
 	}
-
+	mprintf(("EvalStringWithReturn success, lua stack: %d\n",lua_gettop(LuaState)));
+	lua_pop(LuaState, 1);
 	return true;
 }
 
