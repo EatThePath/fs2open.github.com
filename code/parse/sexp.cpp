@@ -11846,7 +11846,7 @@ void sexp_clear_goals(int n)
 		if (ship_entry)
 		{
 			if (ship_entry->status != ShipStatus::PRESENT)
-				return;										// ship not around anymore???? then forget it!
+				continue;										// ship not around anymore???? then forget it!
 
 			ai_clear_ship_goals(&(Ai_info[ship_entry->shipp->ai_index]));
 			continue;
@@ -11856,7 +11856,7 @@ void sexp_clear_goals(int n)
 		if (wingp)
 		{
 			if (wingp->flags[Ship::Wing_Flags::Gone])
-				return;										// wing not around anymore???? then forget it!
+				continue;										// wing not around anymore???? then forget it!
 
 			ai_clear_wing_goals(wingp);
 		}
@@ -32316,6 +32316,21 @@ int get_category(int sexp_id)
 		category = OP_CATEGORY_CHANGE;
 
 	return category;
+}
+
+// Goober5000
+const char *get_category_name(int category_id)
+{
+	if (category_id == OP_CATEGORY_CHANGE2)
+		category_id = OP_CATEGORY_CHANGE;
+
+	for (auto &category : op_menu)
+	{
+		if (category.id == category_id)
+			return category.name.c_str();
+	}
+
+	return "<unknown>";
 }
 
 // Goober5000
