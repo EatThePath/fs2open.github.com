@@ -6,8 +6,8 @@ if (EXISTS "${PROJECT_SOURCE_DIR}/version_override.cmake")
     include("${PROJECT_SOURCE_DIR}/version_override.cmake")
 endif()
 
-set_if_not_defined(FSO_VERSION_MAJOR 22)
-set_if_not_defined(FSO_VERSION_MINOR 3)
+set_if_not_defined(FSO_VERSION_MAJOR 22200)
+set_if_not_defined(FSO_VERSION_MINOR 4)
 set_if_not_defined(FSO_VERSION_BUILD 0)
 
 # A numeric revision e.g. the CI build number
@@ -22,7 +22,7 @@ else()
     set(FSO_VERSION_HAS_REVISION 1)
 endif()
 
-set(FSO_FULL_VERSION_STRING "${FSO_VERSION_MAJOR}.${FSO_VERSION_MINOR}.${FSO_VERSION_BUILD}")
+set(FSO_FULL_VERSION_STRING "w${FSO_VERSION_MAJOR}.${FSO_VERSION_MINOR}.${FSO_VERSION_BUILD}")
 set(FSO_PRODUCT_VERSION_STRING "${FSO_FULL_VERSION_STRING}")
 
 if (FSO_VERSION_HAS_REVISION)
