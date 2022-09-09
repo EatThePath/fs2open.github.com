@@ -67,6 +67,11 @@ bool Using_in_game_options;
 float Dinky_shockwave_default_multiplier;
 bool Shockwaves_always_damage_bombs;
 bool Shockwaves_damage_all_obj_types_once;
+bool Shockwaves_inherit_parent_damage_type;
+SCP_string Inherited_shockwave_damage_type_suffix;
+SCP_string Inherited_dinky_shockwave_damage_type_suffix;
+SCP_string Default_shockwave_damage_type;
+SCP_string Default_dinky_shockwave_damage_type;
 std::tuple<ubyte, ubyte, ubyte> Arc_color_damage_p1;
 std::tuple<ubyte, ubyte, ubyte> Arc_color_damage_p2;
 std::tuple<ubyte, ubyte, ubyte> Arc_color_damage_s1;
@@ -99,6 +104,7 @@ int Show_subtitle_screen_base_res[2];
 int Show_subtitle_screen_adjusted_res[2];
 bool Always_warn_player_about_unbound_keys;
 shadow_disable_overrides Shadow_disable_overrides {false, false, false, false};
+float Thruster_easing;
 
 void mod_table_set_version_flags();
 
@@ -654,6 +660,14 @@ void parse_mod_table(const char *filename)
 			stuff_float(&Min_pixel_size_laser);
 		}
 
+		if (optional_string("$Thruster easing value:")) {
+			stuff_float(&Thruster_easing);
+			if (Thruster_easing <= 0.0f) {
+				Warning(LOCATION, "A \'Thruster easing value\' less than or equal to 0 will not be used.\n");
+			}
+
+		}
+
 		optional_string("#NETWORK SETTINGS");
 
 		if (optional_string("$FS2NetD port:")) {
@@ -859,6 +873,29 @@ void parse_mod_table(const char *filename)
 			stuff_boolean(&Shockwaves_damage_all_obj_types_once);
 		}
 
+		if (optional_string("$Shockwaves Inherit Parent Weapon Damage Type:")) {
+			stuff_boolean(&Shockwaves_inherit_parent_damage_type);
+		}
+
+		if (optional_string("$Inherited Shockwave Damage Type Added Suffix:")) {
+			stuff_string(Inherited_shockwave_damage_type_suffix, F_NAME);
+			Inherited_dinky_shockwave_damage_type_suffix = Inherited_shockwave_damage_type_suffix;
+		}
+
+		if (optional_string("$Inherited Dinky Shockwave Damage Type Added Suffix:")) {
+			stuff_string(Inherited_dinky_shockwave_damage_type_suffix, F_NAME);
+		}
+
+		if (optional_string("$Default Shockwave Damage Type:")) {
+			stuff_string(Default_shockwave_damage_type, F_NAME);
+			// Should this automatically be copied to dinky shockwaves?
+			Default_dinky_shockwave_damage_type = Default_shockwave_damage_type;
+		}
+
+		if (optional_string("$Default Dinky Shockwave Damage Type:")) {
+			stuff_string(Default_dinky_shockwave_damage_type, F_NAME);
+		}
+
 		if (optional_string("$Use Engine Wash Intensity:")) {
 			stuff_boolean(&Use_engine_wash_intensity);
 		}
@@ -989,6 +1026,11 @@ void mod_table_reset()
 	Dinky_shockwave_default_multiplier = 1.0f;
 	Shockwaves_always_damage_bombs = false;
 	Shockwaves_damage_all_obj_types_once = false;
+	Shockwaves_inherit_parent_damage_type = false;
+	Inherited_shockwave_damage_type_suffix = "";
+	Inherited_dinky_shockwave_damage_type_suffix = "";
+	Default_shockwave_damage_type = "";
+	Default_dinky_shockwave_damage_type = "";
 	Arc_color_damage_p1 = std::make_tuple(static_cast<ubyte>(64), static_cast<ubyte>(64), static_cast<ubyte>(225));
 	Arc_color_damage_p2 = std::make_tuple(static_cast<ubyte>(128), static_cast<ubyte>(128), static_cast<ubyte>(255));
 	Arc_color_damage_s1 = std::make_tuple(static_cast<ubyte>(200), static_cast<ubyte>(200), static_cast<ubyte>(255));
@@ -1022,6 +1064,7 @@ void mod_table_reset()
 	Show_subtitle_screen_adjusted_res[0] = -1;
 	Show_subtitle_screen_adjusted_res[1] = -1;
 	Always_warn_player_about_unbound_keys = false;
+	Thruster_easing = 0;
 }
 
 void mod_table_set_version_flags()
@@ -1032,5 +1075,8 @@ void mod_table_set_version_flags()
 		Shockwaves_damage_all_obj_types_once = true;
 		Framerate_independent_turning = true;					// this is already true, but let's re-emphasize it
 		Use_host_orientation_for_set_camera_facing = true;		// this is essentially a bugfix
+	}
+	if (mod_supports_version(22, 4, 0)) {
+		Shockwaves_inherit_parent_damage_type = true;	// people intuitively expect shockwaves to default to the damage type of the weapon that spawned them
 	}
 }

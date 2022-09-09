@@ -56,6 +56,11 @@ extern bool Using_in_game_options;
 extern float Dinky_shockwave_default_multiplier;
 extern bool Shockwaves_always_damage_bombs;
 extern bool Shockwaves_damage_all_obj_types_once;
+extern bool Shockwaves_inherit_parent_damage_type;
+extern SCP_string Inherited_shockwave_damage_type_suffix;
+extern SCP_string Inherited_dinky_shockwave_damage_type_suffix;
+extern SCP_string Default_shockwave_damage_type;
+extern SCP_string Default_dinky_shockwave_damage_type;
 extern std::tuple<ubyte, ubyte, ubyte> Arc_color_damage_p1;
 extern std::tuple<ubyte, ubyte, ubyte> Arc_color_damage_p2;
 extern std::tuple<ubyte, ubyte, ubyte> Arc_color_damage_s1;
@@ -90,6 +95,7 @@ extern bool Always_warn_player_about_unbound_keys;
 extern struct shadow_disable_overrides {
 	bool disable_techroom, disable_mission_select_weapons, disable_mission_select_ships, disable_cockpit;
 } Shadow_disable_overrides;
+extern float Thruster_easing;
 
 void mod_table_init();
 void mod_table_post_process();
