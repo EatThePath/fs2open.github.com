@@ -26,6 +26,7 @@
 #include "gamesnd/eventmusic.h"
 #include "gamesnd/gamesnd.h"
 #include "globalincs/alphacolors.h"
+#include "graphics/light.h"
 #include "graphics/matrix.h"
 #include "graphics/shadows.h"
 #include "def_files/def_files.h"
@@ -178,6 +179,15 @@ SCP_vector<exited_ship> Ships_exited;
 
 SCP_vector<ship_registry_entry> Ship_registry;
 SCP_unordered_map<SCP_string, int, SCP_string_lcase_hash, SCP_string_lcase_equal_to> Ship_registry_map;
+
+int ship_registry_get_index(const char *name)
+{
+	auto ship_it = Ship_registry_map.find(name);
+	if (ship_it != Ship_registry_map.end())
+		return ship_it->second;
+
+	return -1;
+}
 
 const ship_registry_entry *ship_registry_get(const char *name)
 {
@@ -526,6 +536,8 @@ ship_flag_name Ship_flag_names[] = {
 	{ Ship_Flags::No_disabled_self_destruct,	"no-disabled-self-destruct" },
 	{ Ship_Flags::Hide_mission_log,				"hide-in-mission-log" },
 	{ Ship_Flags::No_passive_lightning,			"no-ship-passive-lightning" },
+	{ Ship_Flags::Glowmaps_disabled,			"glowmaps-disabled" },
+	{ Ship_Flags::No_thrusters,					"no-thrusters" },
 	{ Ship_Flags::Fail_sound_locked_primary, 	"fail-sound-locked-primary"},
 	{ Ship_Flags::Fail_sound_locked_secondary, 	"fail-sound-locked-secondary"},
 	{ Ship_Flags::Aspect_immune, 				"aspect-immune"}
@@ -7414,6 +7426,11 @@ void ship_render_cockpit(object *objp)
 	gr_set_proj_matrix(Proj_fov, gr_screen.clip_aspect, 0.02f, 10.0f * pm->rad);
 	gr_set_view_matrix(&leaning_position, &Eye_matrix);
 
+	Shadow_view_matrix_render = gr_view_matrix;
+
+	if(Cmdline_deferred_lighting_cockpit)
+		gr_deferred_lighting_begin(true);
+
 	uint render_flags = MR_NORMAL;
 	render_flags |= MR_NO_FOGGING;
 
@@ -7428,10 +7445,24 @@ void ship_render_cockpit(object *objp)
 
 	model_render_immediate(&render_info, sip->cockpit_model_num, &eye_ori, &pos);
 
-	Proj_fov = fov_backup;
+	if (Cmdline_deferred_lighting_cockpit) {
+		gr_end_view_matrix();
+		gr_end_proj_matrix();
+
+		gr_set_proj_matrix(Proj_fov, gr_screen.clip_aspect, Min_draw_distance, Max_draw_distance);
+		gr_set_view_matrix(&Eye_position, &Eye_matrix);
+
+		gr_deferred_lighting_end();
+		gr_deferred_lighting_finish();
+
+		gr_reset_lighting();
+		gr_set_lighting();
+	}
 
 	gr_end_view_matrix();
 	gr_end_proj_matrix();
+
+	Proj_fov = fov_backup;
 
 	hud_save_restore_camera_data(0);
 
@@ -10046,16 +10077,26 @@ int ship_create(matrix* orient, vec3d* pos, int ship_type, const char* ship_name
 	// but it breaks multi, so there will just be a warning on debug instead.
 	if ((ship_name == nullptr) || (ship_name_lookup(ship_name) >= 0) /*|| (ship_find_exited_ship_by_name(ship_name) >= 0)*/) {
 		// regular name, regular suffix
+		char base_name[NAME_LENGTH];
 		char suffix[NAME_LENGTH];
-		strcpy_s(shipp->ship_name, Ship_info[ship_type].name);
+		strcpy_s(base_name, Ship_info[ship_type].name);
 		sprintf(suffix, NOX(" %d"), n);
 
 		// default names shouldn't have a hashed suffix
-		end_string_at_first_hash_symbol(shipp->ship_name);
+		end_string_at_first_hash_symbol(base_name);
 
-		// build it
-		Assert(strlen(shipp->ship_name) + strlen(suffix) <= NAME_LENGTH - 1);
+		// start building name
+		strcpy_s(shipp->ship_name, base_name);
+
+		// if generated name will be longer than allowable name, truncate the class section of the name by the overflow
+		int char_overflow = static_cast<int>(strlen(base_name) + strlen(suffix)) - (NAME_LENGTH - 1);
+		if (char_overflow > 0) {
+			shipp->ship_name[strlen(base_name) - static_cast<size_t>(char_overflow)] = '\0';
+		}
+
+		// complete building the name by adding suffix number
 		strcat_s(shipp->ship_name, suffix);
+
 	} else {
 		if (ship_find_exited_ship_by_name(ship_name) >= 0 && !(Game_mode & GM_MULTIPLAYER)) {
 			Warning(LOCATION, "Newly-arrived ship %s has been given the same name as a ship previously destroyed in-mission. This can cause unpredictable SEXP behavior. Correct your mission file or scripts to prevent duplicates.", ship_name);

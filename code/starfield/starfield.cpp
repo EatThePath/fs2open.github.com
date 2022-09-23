@@ -472,8 +472,20 @@ void parse_startbl(const char *filename)
 				stuff_float(&sbm.b);
 				stuff_float(&sbm.i);
 
-				if (optional_string("$SunSpecularRGB:"))
-					Warning(LOCATION, "Sun %s tried to set SunSpecularRGB. This feature has been deprecated and will be ignored.", sbm.filename);
+				if (optional_string("$SunSpecularRGB:")) {
+					SCP_string warning;
+					sprintf(warning, "Sun %s tried to set SunSpecularRGB. This feature has been deprecated and will be ignored.", sbm.filename);
+
+					float spec_r, spec_g, spec_b;
+					stuff_float(&spec_r);
+					stuff_float(&spec_g);
+					stuff_float(&spec_b);
+
+					if (fl_equal(sbm.r, spec_r) && fl_equal(sbm.g, spec_g) && fl_equal(sbm.b, spec_b))
+						mprintf(("%s\n", warning.c_str()));				// default case is not significant
+					else
+						Warning(LOCATION, "%s", warning.c_str());		// customized case is significant
+				}
 
 				// lens flare stuff
 				if (optional_string("$Flare:")) {
@@ -847,7 +859,7 @@ static void irradiance_map_gen()
 		gen_flags |= BMP_FLAG_RENDER_TARGET_DYNAMIC;
 	}
 
-	gr_screen.irrmap_render_target = bm_make_render_target(16, 16, gen_flags);
+	gr_screen.irrmap_render_target = bm_make_render_target(irr_size, irr_size, gen_flags);
 	IRRMAP = gr_screen.irrmap_render_target;
 }
 

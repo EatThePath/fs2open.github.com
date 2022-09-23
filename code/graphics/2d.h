@@ -253,7 +253,8 @@ enum class uniform_block_type {
 	DecalGlobals = 4,
 	DeferredGlobals = 5,
 	Matrices = 6,
-	GenericData = 7,
+	MovieData = 7,
+	GenericData = 8,
 
 	NUM_BLOCK_TYPES
 };
@@ -796,7 +797,7 @@ typedef struct screen {
 	std::function<void()> gf_post_process_save_zbuffer;
 	std::function<void()> gf_post_process_restore_zbuffer;
 
-	std::function<void()> gf_deferred_lighting_begin;
+	std::function<void(bool clearNonColorBufs)> gf_deferred_lighting_begin;
 	std::function<void()> gf_deferred_lighting_end;
 	std::function<void()> gf_deferred_lighting_finish;
 

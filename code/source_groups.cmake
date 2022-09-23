@@ -1274,8 +1274,6 @@ add_file_folder("Scripting\\\\Api\\\\Libs"
 	scripting/api/libs/options.h
 	scripting/api/libs/parse.cpp
 	scripting/api/libs/parse.h
-	scripting/api/objs/redalert.cpp
-	scripting/api/objs/redalert.h
 	scripting/api/libs/tables.cpp
 	scripting/api/libs/tables.h
 	scripting/api/libs/testing.cpp
@@ -1299,6 +1297,8 @@ add_file_folder("Scripting\\\\Api\\\\Objs"
 	scripting/api/objs/background_element.h
 	scripting/api/objs/beam.cpp
 	scripting/api/objs/beam.h
+	scripting/api/objs/briefing.cpp
+	scripting/api/objs/briefing.h
 	scripting/api/objs/bytearray.cpp
 	scripting/api/objs/bytearray.h
 	scripting/api/objs/camera.cpp
@@ -1313,6 +1313,8 @@ add_file_folder("Scripting\\\\Api\\\\Objs"
 	scripting/api/objs/color.h
 	scripting/api/objs/control_info.cpp
 	scripting/api/objs/control_info.h
+	scripting/api/objs/debriefing.cpp
+	scripting/api/objs/debriefing.h
 	scripting/api/objs/debris.cpp
 	scripting/api/objs/debris.h
 	scripting/api/objs/decaldefinition.cpp
@@ -1381,6 +1383,8 @@ add_file_folder("Scripting\\\\Api\\\\Objs"
 	scripting/api/objs/player.h
 	scripting/api/objs/promise.cpp
 	scripting/api/objs/promise.h
+	scripting/api/objs/redalert.cpp
+	scripting/api/objs/redalert.h
 	scripting/api/objs/sexpvar.cpp
 	scripting/api/objs/sexpvar.h
 	scripting/api/objs/shields.cpp
@@ -1403,6 +1407,8 @@ add_file_folder("Scripting\\\\Api\\\\Objs"
 	scripting/api/objs/subsystem.h
 	scripting/api/objs/team.cpp
 	scripting/api/objs/team.h
+	scripting/api/objs/techroom.cpp
+	scripting/api/objs/techroom.h
 	scripting/api/objs/texture.cpp
 	scripting/api/objs/texture.h
 	scripting/api/objs/texturemap.cpp

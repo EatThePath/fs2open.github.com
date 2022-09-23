@@ -439,22 +439,14 @@ const char* HudGauge::getCustomGaugeText()
 	return custom_text.c_str();
 }
 
-void HudGauge::updateCustomGaugeCoords(int _x, int _y)
+void HudGauge::setGaugeCoords(int _x, int _y)
 {
-	if(!custom_gauge) {
-		return;
-	}
-
 	position[0] = _x;
 	position[1] = _y;
 }
 
-void HudGauge::updateCustomGaugeFrame(int frame_offset)
+void HudGauge::setGaugeFrame(int frame_offset)
 {
-	if(!custom_gauge) {
-		return;
-	}
-	
 	if (frame_offset < 0 ||frame_offset > custom_frame.num_frames) {
 		return;
 	}
@@ -1611,6 +1603,7 @@ void hud_update_frame(float  /*frametime*/)
 	if (Player->target_is_dying) {
 		hud_stop_looped_locking_sounds();
 		if ( Players[Player_num].flags & PLAYER_FLAGS_AUTO_TARGETING ) {
+			Player_ai->target_objnum = -1;
 			hud_target_auto_target_next();
 		}
 	}
@@ -3981,6 +3974,18 @@ int hud_get_default_gauge_index(const char *name)
 	}
 
 	return -1;
+}
+
+HudGauge *hud_get_gauge(const char *name)
+{
+	auto gauge = hud_get_custom_gauge(name);
+	if (gauge == nullptr)
+	{
+		int idx = hud_get_default_gauge_index(name);
+		if (idx >= 0 && idx < (int)default_hud_gauges.size())
+			gauge = default_hud_gauges[idx].get();
+	}
+	return gauge;
 }
 
 HudGaugeMultiMsg::HudGaugeMultiMsg():

@@ -22,6 +22,7 @@
 #include "network/multi_log.h"
 #include "options/OptionsManager.h"
 #include "osapi/osapi.h"
+#include "osapi/dialogs.h"
 #include "parse/sexp.h"
 #include "scripting/scripting.h"
 #include "sound/openal.h"
@@ -170,6 +171,7 @@ Flag exe_params[] =
     { "-fb_thrusters",      "Enable Framebuffer Thrusters",             true,   EASY_ALL_ON,						EASY_DEFAULT,					"Graphics",     "http://www.hard-light.net/wiki/index.php/Command-Line_Reference#-fb_thrusters", },
 	{ "-no_deferred",		"Disable Deferred Lighting",				true,	EASY_DEFAULT | EASY_HI_MEM_OFF,		EASY_ALL_ON | EASY_HI_MEM_ON,	"Graphics",		"http://www.hard-light.net/wiki/index.php/Command-Line_Reference#-no_deferred"},
 	{ "-enable_shadows",	"Enable Shadows",							true,	EASY_ALL_ON  | EASY_HI_MEM_ON,		EASY_DEFAULT | EASY_HI_MEM_OFF,	"Graphics",		"http://www.hard-light.net/wiki/index.php/Command-Line_Reference#-enable_shadows"},
+	{ "-deferred_cockpit",	"Enable Deferred Lighting for Cockpits",	true,	EASY_ALL_ON	 | EASY_HI_MEM_ON,		EASY_DEFAULT | EASY_HI_MEM_OFF,	"Graphics",		"http://www.hard-light.net/wiki/index.php/Command-Line_Reference#-deferred_cockpit"},
 
 	{ "-no_vsync",			"Disable vertical sync",					true,	0,									EASY_DEFAULT,					"Game Speed",	"http://www.hard-light.net/wiki/index.php/Command-Line_Reference#-no_vsync", },
 
@@ -344,6 +346,7 @@ cmdline_parm flightshaftsoff_arg("-nolightshafts", NULL, AT_NONE);
 cmdline_parm shadow_quality_arg("-shadow_quality", NULL, AT_INT);
 cmdline_parm enable_shadows_arg("-enable_shadows", NULL, AT_NONE);
 cmdline_parm no_deferred_lighting_arg("-no_deferred", NULL, AT_NONE);	// Cmdline_no_deferred
+cmdline_parm deferred_lighting_cockpit_arg("-deferred_cockpit", nullptr, AT_NONE);
 cmdline_parm anisotropy_level_arg("-anisotropic_filter", NULL, AT_INT);
 
 float Cmdline_clip_dist = Default_min_draw_distance;
@@ -363,6 +366,7 @@ int Cmdline_softparticles = 0;
 int Cmdline_bloom_intensity = 25;
 bool Cmdline_force_lightshaft_off = false;
 int Cmdline_no_deferred_lighting = 0;
+bool Cmdline_deferred_lighting_cockpit = false;
 int Cmdline_aniso_level = 0;
 
 // Game Speed related
@@ -374,7 +378,7 @@ int Cmdline_no_vsync = 0;
 
 // HUD related
 cmdline_parm ballistic_gauge("-ballistic_gauge", NULL, AT_NONE);	// Cmdline_ballistic_gauge
-cmdline_parm dualscanlines_arg("-dualscanlines", NULL, AT_NONE); // Cmdline_dualscanlines  -- Change to phreaks options including new targeting code
+cmdline_parm dualscanlines_arg("-dualscanlines", NULL, AT_NONE); // Cmdline_dualscanlines  -- Change to phreaks options including new targeting code; semi-deprecated but still functional
 cmdline_parm orb_radar("-orbradar", NULL, AT_NONE);			// Cmdline_orb_radar
 cmdline_parm rearm_timer_arg("-rearm_timer", NULL, AT_NONE);	// Cmdline_rearm_timer
 cmdline_parm targetinfo_arg("-targetinfo", NULL, AT_NONE);	// Cmdline_targetinfo  -- Adds ship name/class to right of target box -C
@@ -477,6 +481,8 @@ bool Cmdline_dump_packet_type = false;
 #ifdef WIN32
 bool Cmdline_alternate_registry_path = false;
 #endif
+uint Cmdline_rng_seed = 0;
+bool Cmdline_reuse_rng_seed = false;
 
 // Developer/Testing related
 cmdline_parm start_mission_arg("-start_mission", "Skip mainhall and run this mission", AT_STRING);	// Cmdline_start_mission
@@ -508,7 +514,8 @@ cmdline_parm debug_window_arg("-debug_window", NULL, AT_NONE);	// Cmdline_debug_
 cmdline_parm graphics_debug_output_arg("-gr_debug", nullptr, AT_NONE); // Cmdline_graphics_debug_output
 cmdline_parm log_to_stdout_arg("-stdout_log", nullptr, AT_NONE); // Cmdline_log_to_stdout
 cmdline_parm slow_frames_ok_arg("-slow_frames_ok", nullptr, AT_NONE);	// Cmdline_slow_frames_ok
-cmdline_parm luadev_arg("-luadev", "nullptr", AT_NONE);	// Cmdline_slow_frames_ok
+cmdline_parm fixed_seed_rand("-seed", nullptr, AT_INT);	// Cmdline_rng_seed,Cmdline_reuse_rng_seed;
+cmdline_parm luadev_arg("-luadev", "nullptr", AT_NONE);	// Cmdline_lua_devmode
 
 
 char *Cmdline_start_mission = NULL;
@@ -1855,7 +1862,7 @@ bool SetCmdlineParams()
 	if (emissive_power_arg.found() && emissive_power_arg.has_param()) {
 		Cmdline_emissive_power = emissive_power_arg.get_float();
 	} else if (emissive_arg.found() || emissive_power_arg.found()) {
-		// for legacy support no parm defaults to the old emissive value
+		// for legacy support no argument param defaults to the old emissive value
 		Cmdline_emissive_power = 0.30f;
 	}
 
@@ -2012,10 +2019,6 @@ bool SetCmdlineParams()
 		Cmdline_no_fbo = 1;
 	}
 
-	if ( emissive_arg.found() && !emissive_power_arg.found()){
-		Cmdline_emissive_power = 0.30f;
-	}
-
 	if ( rearm_timer_arg.found() )
 		Cmdline_rearm_timer = 1;
 
@@ -2112,6 +2115,11 @@ bool SetCmdlineParams()
 	if( no_deferred_lighting_arg.found() )
 	{
 		Cmdline_no_deferred_lighting = 1;
+	}
+
+	if( deferred_lighting_cockpit_arg.found() )
+	{
+		Cmdline_deferred_lighting_cockpit = true;
 	}
 
 	if (anisotropy_level_arg.found()) 
@@ -2240,6 +2248,16 @@ bool SetCmdlineParams()
  
 	if (log_multi_packet_arg.found()) {
 		Cmdline_dump_packet_type = true;
+	}
+
+	if (fixed_seed_rand.found()) {
+		Cmdline_rng_seed = abs(fixed_seed_rand.get_int());
+		if (Cmdline_rng_seed>0) {
+			Cmdline_reuse_rng_seed = true;
+		}
+		else {
+			Warning(LOCATION,"-seed must be an integer greater than 0. Invalid input seed will be disregarded.");
+		}
 	}
 
 	return true; 

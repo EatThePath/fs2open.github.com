@@ -142,6 +142,7 @@ SCP_vector<sexp_oper> Operators = {
 	{ "bitwise-or",						OP_BITWISE_OR,							2,	INT_MAX,	SEXP_ARITHMETIC_OPERATOR,	},	// Goober5000
 	{ "bitwise-not",					OP_BITWISE_NOT,							1,	1,			SEXP_ARITHMETIC_OPERATOR,	},	// Goober5000
 	{ "bitwise-xor",					OP_BITWISE_XOR,							2,	2,			SEXP_ARITHMETIC_OPERATOR,	},	// Goober5000
+	{ "angle-vectors",					OP_ANGLE_VECTORS,						6,  6,			SEXP_ARITHMETIC_OPERATOR,   },  // Lafiel
 
 	//Logical Category
 	{ "true",							OP_TRUE,								0,	0,			SEXP_BOOLEAN_OPERATOR,	},
@@ -309,6 +310,7 @@ SCP_vector<sexp_oper> Operators = {
 	{ "get-object-speed-x",				OP_GET_OBJECT_SPEED_X,					1,	2,			SEXP_INTEGER_OPERATOR,	},
 	{ "get-object-speed-y",				OP_GET_OBJECT_SPEED_Y,					1,	2,			SEXP_INTEGER_OPERATOR,	},
 	{ "get-object-speed-z",				OP_GET_OBJECT_SPEED_Z,					1,	2,			SEXP_INTEGER_OPERATOR,	},
+	{ "angle-facing-object",			OP_ANGLE_FVEC_TARGET,					2,  2,			SEXP_INTEGER_OPERATOR,  }, // Lafiel 
 
 	//Variables Sub-Category
 	{ "string-to-int",					OP_STRING_TO_INT,						1,	1,			SEXP_INTEGER_OPERATOR,	}, // Karajorma
@@ -3395,6 +3397,17 @@ int check_sexp_syntax(int node, int return_type, int recursive, int *bad_node, i
 
 				break;
 
+			case OPF_ANY_HUD_GAUGE:
+				if (type2 != SEXP_ATOM_STRING) {
+					return SEXP_CHECK_TYPE_MISMATCH;
+				}
+
+				if (hud_get_gauge(CTEXT(node)) == nullptr) {
+					return SEXP_CHECK_INVALID_ANY_HUD_GAUGE;
+				}
+
+				break;
+
 			case OPF_SOUND_ENVIRONMENT_OPTION:
 				if (type2 != SEXP_ATOM_STRING) {
 					return SEXP_CHECK_TYPE_MISMATCH;
@@ -4574,13 +4587,11 @@ void stuff_sexp_text_string(SCP_string &dest, int node, int mode)
 		// number
 		if (Sexp_nodes[node].subtype == SEXP_ATOM_NUMBER)
 		{
-			Assert(Sexp_variables[sexp_variables_index].type & SEXP_VARIABLE_NUMBER);
 			sprintf(dest, "@%s[%s] ", var_name, var_contents);
 		}
 		// string
 		else if (Sexp_nodes[node].subtype == SEXP_ATOM_STRING)
 		{
-			Assert(Sexp_variables[sexp_variables_index].type & SEXP_VARIABLE_STRING);
 			sprintf(dest, "\"@%s[%s]\" ", var_name, var_contents);
 		}
 		else
@@ -8309,6 +8320,69 @@ int sexp_get_object_angle(int n, int axis)
 	}
 }
 
+int sexp_angle_vectors(int node) {
+	vec3d v1, v2;
+	bool is_nan1, is_nan_forever1, is_nan2, is_nan_forever2;
+
+	eval_vec3d(&v1, node, is_nan1, is_nan_forever1);
+	eval_vec3d(&v2, node, is_nan2, is_nan_forever2);
+
+	if (is_nan_forever1 || is_nan_forever2)
+		return SEXP_NAN_FOREVER;
+
+	if (is_nan1 || is_nan2)
+		return SEXP_NAN;
+
+	if (IS_VEC_NULL(&v1) || IS_VEC_NULL(&v2))
+		return SEXP_NAN;
+
+	float angle = fl_degrees(vm_vec_dot(&v1, &v2) / (vm_vec_mag(&v1) * vm_vec_mag(&v2)));
+
+	return fl2ir(angle);
+}
+
+int sexp_angle_fvec_target(int node) {
+	auto* ship = eval_ship(node);
+
+	if (ship->status == ShipStatus::EXITED)
+		return SEXP_NAN_FOREVER;
+	else if (ship->status == ShipStatus::NOT_YET_PRESENT)
+		return SEXP_NAN;
+
+	const vec3d& pos1 = ship->objp->pos;
+	const vec3d& v1 = ship->objp->orient.vec.fvec;
+
+	object_ship_wing_point_team oswpt;
+	eval_object_ship_wing_point_team(&oswpt, CDR(node));
+
+	switch (oswpt.type)
+	{
+	case OSWPT_TYPE_SHIP:
+	case OSWPT_TYPE_WING:
+	case OSWPT_TYPE_WAYPOINT: {
+		const vec3d& pos2 = oswpt.objp->pos;
+
+		if (vm_vec_equal(pos1, pos2))
+			return SEXP_NAN;
+
+		vec3d v2;
+		vm_vec_normalized_dir(&v2, &pos2, &pos1);
+
+		// No need to divide by product of magnitudes, both fvec and v2 are normalized
+		float angle = fl_degrees(acosf_safe(vm_vec_dot(&v1, &v2)));
+
+		return fl2ir(angle);
+	}
+
+	case OSWPT_TYPE_NONE:
+	case OSWPT_TYPE_EXITED:
+		return SEXP_NAN_FOREVER;
+
+	default:
+		return SEXP_NAN;
+	}
+}
+
 void set_object_for_clients(object *objp)
 {
 	if (!(Game_mode & GM_MULTIPLAYER)) {
@@ -11945,7 +12019,7 @@ void sexp_hud_set_text_num(int n)
 		}
 		cg->updateCustomGaugeText(tmp);
 	} else {
-		WarningEx(LOCATION, "Could not find a hud gauge named %s\n", gaugename);
+		WarningEx(LOCATION, "Could not find a custom hud gauge named %s\n", gaugename);
 	}
 }
 
@@ -11958,7 +12032,7 @@ void sexp_hud_set_text(int n)
 	if (cg) {
 		cg->updateCustomGaugeText(text);
 	} else {
-		WarningEx(LOCATION, "Could not find a hud gauge named %s\n", gaugename);
+		WarningEx(LOCATION, "Could not find a custom hud gauge named %s\n", gaugename);
 	}
 }
 
@@ -12042,9 +12116,9 @@ void sexp_hud_set_coords(int n)
 	if (is_nan || is_nan_forever)
 		return;
 
-	HudGauge* cg = hud_get_custom_gauge(gaugename);
-	if (cg) {
-		cg->updateCustomGaugeCoords(coord_x, coord_y);
+	HudGauge* hg = hud_get_gauge(gaugename);
+	if (hg) {
+		hg->setGaugeCoords(coord_x, coord_y);
 	} else {
 		WarningEx(LOCATION, "Could not find a hud gauge named %s\n", gaugename);
 	}
@@ -12059,9 +12133,9 @@ void sexp_hud_set_frame(int n)
 	if (is_nan || is_nan_forever)
 		return;
 
-	HudGauge* cg = hud_get_custom_gauge(gaugename);
-	if (cg) {
-		cg->updateCustomGaugeFrame(frame_num);
+	HudGauge* hg = hud_get_gauge(gaugename);
+	if (hg) {
+		hg->setGaugeFrame(frame_num);
 	} else {
 		WarningEx(LOCATION, "Could not find a hud gauge named %s\n", gaugename);
 	}
@@ -12081,11 +12155,11 @@ void sexp_hud_set_color(int n)
 	if (is_nan || is_nan_forever)
 		return;
 
-	HudGauge* cg = hud_get_custom_gauge(gaugename);
-	if (cg) {
-		cg->sexpLockConfigColor(false);
-		cg->updateColor((ubyte)rgb[0], (ubyte)rgb[1], (ubyte)rgb[2], (HUD_color_alpha + 1) * 16);
-		cg->sexpLockConfigColor(true);
+	HudGauge* hg = hud_get_gauge(gaugename);
+	if (hg) {
+		hg->sexpLockConfigColor(false);
+		hg->updateColor((ubyte)rgb[0], (ubyte)rgb[1], (ubyte)rgb[2], (HUD_color_alpha + 1) * 16);
+		hg->sexpLockConfigColor(true);
 	} else {
 		WarningEx(LOCATION, "Could not find a hud gauge named %s\n", gaugename);
 	}
@@ -12141,7 +12215,7 @@ void sexp_hud_gauge_set_active(int n)
 	auto gaugename = CTEXT(n);
 	bool active = is_sexp_true(CDR(n));
 
-	hg = hud_get_custom_gauge(gaugename);
+	hg = hud_get_gauge(gaugename);
 	if (hg) {
 		hg->updateActive(active);
 	} else {
@@ -16311,39 +16385,29 @@ int sexp_event_status( int n, int want_true )
 int sexp_event_delay_status( int n, int want_true, bool use_msecs = false)
 {
 	bool is_nan, is_nan_forever;
-	fix delay;
+	int delay;
 	int rval = SEXP_FALSE;
 	bool use_as_directive = false;
 
 	auto name = CTEXT(n);
 
-	if (use_msecs) {
-		uint64_t tempDelay = eval_num(CDR(n), is_nan, is_nan_forever);
-		if (is_nan) {
-			return SEXP_FALSE;
-		}
-		else if (is_nan_forever) {
-			return SEXP_KNOWN_FALSE;
-		}
-
-		tempDelay = tempDelay << 16;
-		tempDelay = tempDelay / 1000;
-
-		delay = (fix) tempDelay;
-	} else {
-		delay = i2f(eval_num(CDR(n), is_nan, is_nan_forever));
-		if (is_nan) {
-			return SEXP_FALSE;
-		}
-		else if (is_nan_forever) {
-			return SEXP_KNOWN_FALSE;
-		}
+	delay = eval_num(CDR(n), is_nan, is_nan_forever);
+	if (is_nan) {
+		return SEXP_FALSE;
+	}
+	else if (is_nan_forever) {
+		return SEXP_KNOWN_FALSE;
+	}
+	if (!use_msecs) {
+		delay *= MILLISECONDS_PER_SECOND;
 	}
 
 	for (int i = 0; i < Num_mission_events; ++i) {
-		// look for the event name, check it's status.  If formula is gone, we know the state won't ever change.
+		// look for the event name; check its status.  If formula is gone, we know the state won't ever change.
 		if ( !stricmp(Mission_events[i].name, name) ) {
-			if ( (fix) Mission_events[i].timestamp + delay >= Missiontime ) {
+			// Previous implementations could skip this block if the timestamp wasn't valid yet.  This had no effect
+			// because result, checked below, was still 0; but let's be correct.
+			if ( !Mission_events[i].timestamp.isValid() || timestamp_since(Mission_events[i].timestamp) <= delay ) {
 				rval = SEXP_FALSE;
 				break;
 			}
@@ -17436,7 +17500,7 @@ int sexp_key_pressed(int node)
 	if (is_nan_forever)
 		return SEXP_KNOWN_FALSE;
 
-	return timestamp_has_time_elapsed(Control_config[z].used, t * 1000);
+	return timestamp_since(Control_config[z].used) >= t * MILLISECONDS_PER_SECOND;
 }
 
 void sexp_key_reset(int node)
@@ -17508,13 +17572,13 @@ int sexp_targeted(int node)
 	}
 
 	if (CDR(node) >= 0) {
-		z = eval_num(CDR(node), is_nan, is_nan_forever) * 1000;
+		z = eval_num(CDR(node), is_nan, is_nan_forever);
 		if (is_nan)
 			return SEXP_FALSE;
 		if (is_nan_forever)
 			return SEXP_KNOWN_FALSE;
 
-		if (!timestamp_has_time_elapsed(Players_target_timestamp, z)){
+		if (timestamp_since(Players_target_timestamp) < z * MILLISECONDS_PER_SECOND){
 			return SEXP_FALSE;
 		}
 
@@ -17541,13 +17605,13 @@ int sexp_node_targeted(int node)
 	}
 
 	if (CDR(node) >= 0) {
-		z = eval_num(CDR(node), is_nan, is_nan_forever) * 1000;
+		z = eval_num(CDR(node), is_nan, is_nan_forever);
 		if (is_nan)
 			return SEXP_FALSE;
 		if (is_nan_forever)
 			return SEXP_KNOWN_FALSE;
 
-		if (!timestamp_has_time_elapsed(Players_target_timestamp, z)){
+		if (timestamp_since(Players_target_timestamp) < z * MILLISECONDS_PER_SECOND){
 			return SEXP_FALSE;
 		}
 	}
@@ -17562,13 +17626,13 @@ int sexp_speed(int node)
 
 	if (Training_context & TRAINING_CONTEXT_SPEED) {
 		if (Training_context_speed_set) {
-			z = eval_num(node, is_nan, is_nan_forever) * 1000;
+			z = eval_num(node, is_nan, is_nan_forever);
 			if (is_nan)
 				return SEXP_FALSE;
 			if (is_nan_forever)
 				return SEXP_KNOWN_FALSE;
 
-			if (timestamp_has_time_elapsed(Training_context_speed_timestamp, z)){
+			if (timestamp_since(Training_context_speed_timestamp) >= z * MILLISECONDS_PER_SECOND){
 				return SEXP_KNOWN_TRUE;
 			}
 		}
@@ -19994,7 +20058,7 @@ void sexp_turret_set_rate_of_fire(int node)
 		auto turret = ship_get_subsys(ship_entry->shipp, CTEXT(node));
 		if (turret != nullptr)
 		{
-			// set the range
+			// set the rate
 			if (rof < 0)
 				turret->rof_scaler = turret->system_info->turret_rof_scaler;
 			else
@@ -21530,12 +21594,12 @@ int sexp_missile_locked(int node)
 
 	// if we've gotten this far, we must have satisfied whatever conditions the sexp imposed
 	// finally, test if we've locked for a certain period of time
-	z = eval_num(node, is_nan, is_nan_forever) * 1000;
+	z = eval_num(node, is_nan, is_nan_forever);
 	if (is_nan)
 		return SEXP_FALSE;
 	if (is_nan_forever)
 		return SEXP_KNOWN_FALSE;
-	if (timestamp_has_time_elapsed(Players_mlocked_timestamp, z))
+	if (timestamp_since(Players_mlocked_timestamp) >= z * MILLISECONDS_PER_SECOND)
 	{
 		return SEXP_TRUE;
 	}
@@ -25093,6 +25157,10 @@ int eval_sexp(int cur_node, int referenced_node)
 				sexp_val = sexp_bitwise_xor(node);
 				break;
 
+			case OP_ANGLE_VECTORS:
+				sexp_val = sexp_angle_vectors(node);
+				break;
+
 			// boolean operators can have one of the special sexp values (known true, known false, unknown)
 			case OP_TRUE:
 				sexp_val = SEXP_KNOWN_TRUE;
@@ -25385,6 +25453,10 @@ int eval_sexp(int cur_node, int referenced_node)
 				break;
 			case OP_DISTANCE_BBOX_SUBSYSTEM:
 				sexp_val = sexp_distance_subsystem(node, sexp_bbox_distance_point);
+				break;
+
+			case OP_ANGLE_FVEC_TARGET:
+				sexp_val = sexp_angle_fvec_target(node);
 				break;
 
 			case OP_NUM_WITHIN_BOX:
@@ -27959,6 +28031,8 @@ int query_operator_return_type(int op)
 		case OP_GET_HOTKEY:
 		case OP_GET_CONTAINER_SIZE:
 		case OP_LIST_DATA_INDEX:
+		case OP_ANGLE_VECTORS:
+		case OP_ANGLE_FVEC_TARGET:
 			return OPR_NUMBER;
 
 		case OP_ABS:
@@ -28530,6 +28604,7 @@ int query_operator_argument_type(int op, int argnum)
 		case OP_SIGNUM:
 		case OP_IS_NAN:
 		case OP_NAN_TO_NUMBER:
+		case OP_ANGLE_VECTORS:
 			return OPF_NUMBER;
 
 		case OP_POW:
@@ -28896,6 +28971,12 @@ int query_operator_argument_type(int op, int argnum)
 		case OP_GET_OBJECT_BANK:
 		case OP_GET_OBJECT_HEADING:
 			return OPF_SHIP_WING;
+
+		case OP_ANGLE_FVEC_TARGET:
+			if (argnum == 0)
+				return OPF_SHIP;
+			else
+				return OPF_SHIP_WING_POINT;
 
 		case OP_SET_OBJECT_POSITION:
 			if(argnum == 0)
@@ -29493,17 +29574,22 @@ int query_operator_argument_type(int op, int argnum)
 				return OPF_STRING;
 
 		case OP_HUD_SET_MESSAGE:
-			if(argnum == 0)
+			if (argnum == 0)
 				return OPF_CUSTOM_HUD_GAUGE;
 			else
 				return OPF_MESSAGE;
 
 		case OP_HUD_SET_TEXT_NUM:
+			if (argnum == 0)
+				return OPF_CUSTOM_HUD_GAUGE;
+			else
+				return OPF_POSITIVE;
+
 		case OP_HUD_SET_COORDS:
 		case OP_HUD_SET_FRAME:
 		case OP_HUD_SET_COLOR:
-			if(argnum == 0)
-				return OPF_CUSTOM_HUD_GAUGE;
+			if (argnum == 0)
+				return OPF_ANY_HUD_GAUGE;
 			else
 				return OPF_POSITIVE;
 
@@ -30865,7 +30951,7 @@ int query_operator_argument_type(int op, int argnum)
 
 		case OP_HUD_GAUGE_SET_ACTIVE:
 			if (argnum == 0)
-				return OPF_CUSTOM_HUD_GAUGE;
+				return OPF_ANY_HUD_GAUGE;
 			else
 				return OPF_BOOL;
 
@@ -31302,8 +31388,9 @@ bool sexp_recoverable_error(int num)
 		case SEXP_CHECK_AMBIGUOUS_GOAL_NAME:
 
 		// Having an invalid gauge in FSO won't hurt,
-		// as all places which call hud_get_custom_gauge() check its return value for NULL.
+		// as all places which call hud_get_gauge() or hud_get_custom_gauge() check its return value for NULL.
 		case SEXP_CHECK_INVALID_CUSTOM_HUD_GAUGE:
+		case SEXP_CHECK_INVALID_ANY_HUD_GAUGE:
 			return true;
 
 		// most errors will halt mission loading
@@ -31500,6 +31587,9 @@ const char *sexp_error_message(int num)
 
 		case SEXP_CHECK_INVALID_CUSTOM_HUD_GAUGE:
 			return "Invalid custom HUD gauge";
+
+		case SEXP_CHECK_INVALID_ANY_HUD_GAUGE:
+			return "Invalid custom or builtin HUD gauge";
 
 		case SEXP_CHECK_INVALID_TARGET_PRIORITIES:
 			return "Invalid target priorities";
@@ -32991,6 +33081,7 @@ int get_subcategory(int sexp_id)
 		case OP_NUM_WITHIN_BOX:
 		case OP_SPECIAL_WARP_DISTANCE:
 		case OP_IS_IN_BOX:
+		case OP_ANGLE_FVEC_TARGET:
 			return STATUS_SUBCATEGORY_DISTANCE_AND_COORDINATES;
 
 		case OP_STRING_TO_INT:
@@ -33236,6 +33327,16 @@ SCP_vector<sexp_help_struct> Sexp_help = {
 	// Goober5000
 	{ OP_BITWISE_XOR, "bitwise-xor\r\n"
 		"\tPerforms the bitwise XOR operator on its arguments.  This is the same as if the logical XOR operator was performed on each successive bit.  Takes 2 or more numeric arguments.\r\n" },
+
+	{ OP_ANGLE_VECTORS, "angle-vectors\r\n"
+		"\tCalculates the angle between two vectors."
+		"Takes 6 arguments...\r\n"
+		"\t1: The x component of the first vector.\r\n"
+		"\t2: The y component of the first vector.\r\n"
+		"\t3: The z component of the first vector.\r\n"
+		"\t4: The x component of the second vector.\r\n"
+		"\t5: The y component of the second vector.\r\n"
+		"\t6: The z component of the second vector.\r\n"},
 
 	{ OP_SET_OBJECT_SPEED_X, "set-object-speed-x (deprecated in favor of ship-maneuver)\r\n"
 		"\tSets the X speed of a ship or wing."
@@ -33823,6 +33924,13 @@ SCP_vector<sexp_help_struct> Sexp_help = {
 		"\t1:\tThe name of the object.\r\n"
 		"\t2:\tThe name of the ship which houses the subsystem.\r\n"
 		"\t3:\tThe name of the subsystem." },
+
+	{ OP_ANGLE_FVEC_TARGET, "angle-facing-object\r\n"
+		"\tReturns the angle between the forward vector of a ship and the vector from the ship to another object.\r\n"
+		"\tThis is effectively the FoV the ship would need to see the object.\r\n\r\n"
+		"Returns a numeric value.  Takes 2 arguments...\r\n"
+		"\t1:\tThe name of the ship from which to check.\r\n"
+		"\t2:\tThe name of the object to check." },
 
 	{ OP_NUM_WITHIN_BOX, "Number of specified objects in the box specified\r\n"
 		"\t1: Box center (X)\r\n"
@@ -35333,12 +35441,15 @@ SCP_vector<sexp_help_struct> Sexp_help = {
 		"no-secondary-lock-on - Will disable target acquisition for secondaries of all types (does not affect turrets)\r\n"
 		"no-disabled-self-destruct - Prevents the ship from self-destructing after 90 seconds if its weapons or engines are destroyed\r\n"
 		"hide-in-mission-log - Prevents events involving this ship from being viewable in the mission log\r\n"
-		"no-dynamic - Will stop allowing the AI to pursue dynamic goals (e.g.: chasing ships it was not ordered to)\r\n"
-		"free-afterburner-use - Allows the ship to use afterburners to follow waypoints\r\n"
-		"ai-attackable-if-no-collide - AI will still attack this ship even if collisions are disabled\r\n"
+		"no-ship-passive-lightning - Turns off ship lightning that is unrelated to damage or EMP\r\n"
+		"glowmaps-disabled - Turns off glowmaps\r\n"
+		"no-thrusters - Turns off thrusters\r\n"
 		"fail-sound-locked-primary - This ship will play a weapon failure sound if trying to shoot primaries when they're locked\r\n"
 		"fail-sound-locked-secondary - This ship will play a weapon failure sound if trying to shoot secondaries when they're locked\r\n"
 		"aspect-immune - This ship cannot be locked onto by aspect seeking weapons\r\n"
+		"no-dynamic - Will stop allowing the AI to pursue dynamic goals (e.g.: chasing ships it was not ordered to)\r\n"
+		"free-afterburner-use - Allows the ship to use afterburners to follow waypoints\r\n"
+		"ai-attackable-if-no-collide - AI will still attack this ship even if collisions are disabled\r\n"
 	},
 
 	{ OP_CANCEL_FUTURE_WAVES, "cancel-future-waves\r\n"
@@ -36689,25 +36800,25 @@ SCP_vector<sexp_help_struct> Sexp_help = {
 
 	//WMC
 	{ OP_HUD_SET_TEXT, "hud-set-text\r\n"
-		"\tSets the text value of a given HUD gauge. Works for custom and certain retail gauges. Takes 2 arguments...\r\n"
+		"\tSets the text value of a given HUD gauge. Works for custom gauges only. Takes 2 arguments...\r\n"
 		"\t1:\tHUD gauge to be modified\r\n"
 		"\t2:\tText to be set"
 	},
 
 	{ OP_HUD_SET_TEXT_NUM, "hud-set-text-num\r\n"
-		"\tSets the text value of a given HUD gauge to a number. Works for custom and certain retail gauges. Takes 2 arguments...\r\n"
+		"\tSets the text value of a given HUD gauge to a number. Works for custom gauges only. Takes 2 arguments...\r\n"
 		"\t1:\tHUD gauge to be modified\r\n"
 		"\t2:\tNumber to be set"
 	},
 
 	{ OP_HUD_SET_MESSAGE, "hud-set-message\r\n"
-		"\tSets the text value of a given HUD gauge to a message from the mission's message list. Works for custom and certain retail gauges. Takes 2 arguments...\r\n"
+		"\tSets the text value of a given HUD gauge to a message from the mission's message list. Works for custom gauges only. Takes 2 arguments...\r\n"
 		"\t1:\tHUD gauge to be modified\r\n"
 		"\t2:\tMessage"
 	},
 
 	//WMC
-	{ OP_HUD_SET_COORDS, "hud-set-coord\r\n"
+	{ OP_HUD_SET_COORDS, "hud-set-coords\r\n"
 		"\tSets the coordinates of a given HUD gauge. Works for custom and retail gauges. Takes 3 arguments...\r\n"
 		"\t1:\tHUD gauge to be modified\r\n"
 		"\t2:\tCoordinate X component\r\n"
@@ -36723,7 +36834,7 @@ SCP_vector<sexp_help_struct> Sexp_help = {
 
 	//WMC
 	{ OP_HUD_SET_COLOR, "hud-set-color\r\n"
-		"\tSets the color of a given HUD gauge. Works only for custom gauges Takes 4 arguments...\r\n"
+		"\tSets the color of a given HUD gauge. Works for custom and retail gauges. Takes 4 arguments...\r\n"
 		"\t1:\tHUD gauge to be modified\r\n"
 		"\t2:\tRed component (0-255)\r\n"
 		"\t3:\tGreen component (0-255)\r\n"
@@ -37241,7 +37352,7 @@ SCP_vector<sexp_help_struct> Sexp_help = {
 	},
 
 	{OP_HUD_GAUGE_SET_ACTIVE, "hud-gauge-set-active (deprecated)\r\n"
-		"\tActivates or deactivates a given custom gauge."
+		"\tActivates or deactivates a given hud gauge.  Works for custom and retail gauges."
 		"Takes 2 Arguments...\r\n"
 		"\t1:\tHUD Gauge name\r\n"
 		"\t2:\tBoolean, whether or not to display this gauge\r\n"

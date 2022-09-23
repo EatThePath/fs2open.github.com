@@ -21,6 +21,7 @@
 #include "mission/missionlog.h"
 #include "mission/missionmessage.h"
 #include "mission/missiontraining.h"
+#include "missionui/missionbrief.h"
 #include "missionui/missioncmdbrief.h"
 #include "missionui/redalert.h"
 #include "nebula/neb.h"
@@ -31,6 +32,7 @@
 #include "parse/sexp/LuaSEXP.h"
 #include "parse/sexp/LuaAISEXP.h"
 #include "parse/sexp/sexp_lookup.h"
+#include "playerman/player.h"
 #include "scripting/api/LuaPromise.h"
 #include "scripting/api/objs/LuaSEXP.h"
 #include "scripting/api/objs/luaaisexp.h"
@@ -384,6 +386,46 @@ ADE_FUNC(__len, l_Mission_Ships, NULL,
 		return ade_set_args(L, "i", ship_get_num_ships());
 	else
 		return ade_set_args(L, "i", 0);
+}
+
+//****SUBLIBRARY: Mission/ParsedShips
+ADE_LIB_DERIV(l_Mission_ParsedShips, "ParsedShips", nullptr, "Parsed ships (aka parse objects) in the mission", l_Mission);
+
+ADE_INDEXER(l_Mission_ParsedShips, "number/string IndexOrName", "Gets parsed ship", "parse_object", "Parsed ship handle, or invalid handle if index was invalid")
+{
+	const char *name;
+	if (!ade_get_args(L, "*s", &name))
+		return ade_set_error(L, "o", l_ParseObject.Set(parse_object_h(nullptr)));
+
+	auto pobjp = mission_parse_get_parse_object(name);
+
+	if (pobjp)
+	{
+		return ade_set_args(L, "o", l_ParseObject.Set(parse_object_h(pobjp)));
+	}
+	else
+	{
+		auto idx = atoi(name);
+		if (idx > 0)
+		{
+			idx--;	// Lua -> C++
+
+			if (idx < static_cast<int>(Parse_objects.size()))
+			{
+				return ade_set_args(L, "o", l_ParseObject.Set(parse_object_h(&Parse_objects[idx])));
+			}
+		}
+	}
+
+	return ade_set_error(L, "o", l_ParseObject.Set(parse_object_h(nullptr)));
+}
+
+ADE_FUNC(__len, l_Mission_ParsedShips, NULL,
+		 "Number of parsed ships in the mission. This function is quick and the value returned can be relied on to be stable for the entire mission.",
+		 "number",
+		 "Number of parsed ships in the most recently loaded mission, or 0 if no mission has been parsed yet")
+{
+	return ade_set_args(L, "i", static_cast<int>(Parse_objects.size()));
 }
 
 //****SUBLIBRARY: Mission/Waypoints
@@ -1186,7 +1228,7 @@ ADE_FUNC(startMission,
 		// if mission is not running
 	} else {
 		// due safety checks of the game_start_mission() function allow only main menu for now.
-		if (gameseq_get_state(gameseq_get_depth()) == GS_STATE_MAIN_MENU) {
+		if ((gameseq_get_state(gameseq_get_depth()) == GS_STATE_MAIN_MENU) || (gameseq_get_state(gameseq_get_depth()) == GS_STATE_SIMULATOR_ROOM)) {
 			strcpy_s(Game_current_mission_filename, name_copy);
 			if (b == true) {
 				// start mission - go via briefing screen
@@ -1201,11 +1243,8 @@ ADE_FUNC(startMission,
 	return ade_set_args(L, "b", false);
 }
 
-ADE_FUNC(getMissionTime, l_Mission, NULL, "Game time in seconds since the mission was started; is affected by time compression", "number", "Mission time (seconds), or 0 if game is not in a mission")
+ADE_FUNC(getMissionTime, l_Mission, nullptr, "Game time in seconds since the mission was started; is affected by time compression", "number", "Mission time (seconds) of the current or most recently played mission.")
 {
-	if(!(Game_mode & GM_IN_MISSION))
-		return ade_set_error(L, "f", 0.0f);
-
 	return ade_set_args(L, "x", Missiontime);
 }
 
@@ -1235,7 +1274,7 @@ ADE_FUNC(loadMission, l_Mission, "string missionName", "Loads a mission", "boole
 
 ADE_FUNC(unloadMission, l_Mission, NULL, "Stops the current mission and unloads it", NULL, NULL)
 {
-	(void)L; // unused parameter
+	SCP_UNUSED(L); // unused parameter
 
 	if(Game_mode & GM_IN_MISSION)
 	{
@@ -1367,6 +1406,11 @@ ADE_VIRTVAR(ShudderIntensity, l_Mission, "number", "Gets or sets the shudder int
 	return ade_set_args(L, "f", intensity);
 }
 
+ADE_FUNC(isInMission, l_Mission, nullptr, "get whether or not a mission is currently being played", "boolean", "true if in mission, false otherwise")
+{
+	return ade_set_args(L, "b", (Game_mode & GM_IN_MISSION) != 0);
+}
+
 ADE_FUNC(isInCampaign, l_Mission, NULL, "Get whether or not the current mission being played in a campaign (as opposed to the tech room's simulator)", "boolean", "true if in campaign, false if not")
 {
 	bool b = false;
@@ -1376,6 +1420,31 @@ ADE_FUNC(isInCampaign, l_Mission, NULL, "Get whether or not the current mission 
 	}
 
 	return ade_set_args(L, "b", b);
+}
+
+ADE_FUNC(isInCampaignLoop, l_Mission, nullptr, "Get whether or not the current mission being played is a loop mission in the context of a campaign", "boolean", "true if in loop and campaign, false if not")
+{
+	return ade_set_args(L, "b", (Campaign.loop_enabled) && (Game_mode & GM_CAMPAIGN_MODE));
+}
+
+ADE_FUNC(isTraining, l_Mission, nullptr, "Get whether or not the current mission being played is a training mission", "boolean", "true if in training, false if not")
+{
+	return ade_set_args(L, "b", (The_mission.game_type & MISSION_TYPE_TRAINING) != 0);
+}
+
+ADE_FUNC(isScramble, l_Mission, nullptr, "Get whether or not the current mission being played is a scramble mission", "boolean", "true if scramble, false if not")
+{
+	return ade_set_args(L, "b", (brief_only_allow_briefing() == 1));
+}
+
+ADE_FUNC(isMissionSkipAllowed, l_Mission, nullptr, "Get whether or not the player has reached the failure limit", "boolean", "true if limit reached, false if not")
+{
+	return ade_set_args(L, "b", (Player->failures_this_session >= PLAYER_MISSION_FAILURE_LIMIT));
+}
+
+ADE_FUNC(hasNoBriefing, l_Mission, nullptr, "Get whether or not the mission is set to skip the briefing", "boolean", "true if it should be skipped, false if not")
+{
+	return ade_set_args(L, "b", (The_mission.flags[Mission::Mission_Flags::No_briefing]));
 }
 
 ADE_FUNC(isNebula, l_Mission, nullptr, "Get whether or not the current mission being played is set in a nebula", "boolean", "true if in nebula, false if not")
@@ -1400,6 +1469,10 @@ ADE_FUNC(isSubspace, l_Mission, nullptr, "Get whether or not the current mission
 
 ADE_FUNC(getMissionTitle, l_Mission, NULL, "Get the title of the current mission", "string", "The mission title or an empty string if currently not in mission") {
 	return ade_set_args(L, "s", The_mission.name);
+}
+
+ADE_FUNC(getMissionModifiedDate, l_Mission, NULL, "Get the modified date of the current mission", "string", "The mission modified date or an empty string if currently not in mission") {
+	return ade_set_args(L, "s", The_mission.modified);
 }
 
 static int addBackgroundBitmap_sub(bool uses_correct_angles, lua_State* L)
@@ -1599,6 +1672,28 @@ ADE_FUNC(hasCommandBriefing,
 	"true if command briefing, false otherwise.")
 {
 	return ade_set_args(L, "b", mission_has_cmd_brief() != 0);
+}
+
+ADE_FUNC(hasGoalsStage,
+	l_Mission,
+	nullptr,
+	"Determines if the current mission will show a Goals briefing stage",
+	"boolean",
+	"true if stage is active, false otherwise.")
+{
+	bool goals = The_mission.flags[Mission::Mission_Flags::Toggle_showing_goals] == !!(The_mission.game_type & MISSION_TYPE_TRAINING);
+	
+	return ade_set_args(L, "b", goals);
+}
+
+ADE_FUNC(hasDebriefing,
+	l_Mission,
+	nullptr,
+	"Determines if the current mission has a debriefing",
+	"boolean",
+	"true if debriefing, false otherwise.")
+{
+	return ade_set_args(L, "b", !(The_mission.flags[Mission::Mission_Flags::Toggle_debriefing]));
 }
 
 int testLineOfSight_internal(lua_State* L, bool returnDist_and_Obj) {

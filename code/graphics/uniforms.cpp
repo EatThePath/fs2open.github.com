@@ -169,18 +169,18 @@ void convert_model_material(model_uniform_data* data_out,
 			data_out->gammaSpec = 0;
 			data_out->alphaGloss = 0;
 		}
-
-		if (shader_flags & SDR_FLAG_MODEL_ENV_MAP) {
-			if (material.get_texture_map(TM_SPEC_GLOSS_TYPE) > 0 || Gloss_override_set) {
-				data_out->envGloss = 1;
-			} else {
-				data_out->envGloss = 0;
-			}
-
-			data_out->envMatrix = gr_env_texture_matrix;
-		}
 	}
 
+	if (shader_flags & SDR_FLAG_MODEL_ENV_MAP) {
+		if (material.get_texture_map(TM_SPEC_GLOSS_TYPE) > 0 || Gloss_override_set) {
+			data_out->envGloss = 1;
+		} else {
+			data_out->envGloss = 0;
+		}
+
+		data_out->envMatrix = gr_env_texture_matrix;
+	}
+	
 	if ( shader_flags & SDR_FLAG_MODEL_NORMAL_MAP ) {
 		data_out->sNormalmapIndex = bm_get_array_index(material.get_texture_map(TM_NORMAL_TYPE));
 	}
@@ -194,7 +194,7 @@ void convert_model_material(model_uniform_data* data_out,
 	}
 
 	if (shader_flags & SDR_FLAG_MODEL_SHADOWS) {
-		data_out->shadow_mv_matrix = Shadow_view_matrix;
+		data_out->shadow_mv_matrix = Shadow_view_matrix_light;
 
 		for (size_t i = 0; i < MAX_SHADOW_CASCADES; ++i) {
 			data_out->shadow_proj_matrix[i] = Shadow_proj_matrix[i];

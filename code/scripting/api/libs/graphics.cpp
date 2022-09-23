@@ -49,6 +49,7 @@ static bool WarnedBadThicknessLine = false;
 namespace scripting {
 namespace api {
 
+model_draw_list *Current_scene = nullptr;
 
 //**********LIBRARY: Graphics
 ADE_LIB(l_Graphics, "Graphics", "gr", "Graphics Library");
@@ -276,7 +277,8 @@ ADE_FUNC(clear, l_Graphics, nullptr, "Calls gr_clear(), which fills the entire s
 {
 	gr_clear();
 
-	(void)(L);	// avoid unused parameter warning
+	SCP_UNUSED(L);	// avoid unused parameter warning
+
 	return ADE_RETURN_NIL;
 }
 
@@ -871,6 +873,10 @@ ADE_FUNC(drawModel, l_Graphics, "model model, vector position, orientation orien
 	if(model_num < 0)
 		return ade_set_args(L, "i", 3);
 
+	// Make sure we have a scene to use
+	if (!Current_scene)
+		return ade_set_args(L, "i", 4);
+
 	//Handle angles
 	matrix *orient = mh->GetMatrix();
 
@@ -908,7 +914,7 @@ ADE_FUNC(drawModel, l_Graphics, "model model, vector position, orientation orien
 
 	render_info.set_detail_level_lock(0);
 
-	model_render_immediate(&render_info, model_num, orient, v);
+	model_render_queue(&render_info, Current_scene, model_num, orient, v);
 
 	//OK we're done
 	gr_end_view_matrix();
@@ -947,6 +953,10 @@ ADE_FUNC(drawModelOOR, l_Graphics, "model Model, vector Position, orientation Or
 	if(model_num < 0)
 		return ade_set_args(L, "i", 3);
 
+	// Make sure we have a scene to use
+	if (!Current_scene)
+		return ade_set_args(L, "i", 4);
+
 	//Handle angles
 	matrix *orient = mh->GetMatrix();
 
@@ -956,7 +966,7 @@ ADE_FUNC(drawModelOOR, l_Graphics, "model Model, vector Position, orientation Or
 	model_render_params render_info;
 	render_info.set_flags(flags);
 
-	model_render_immediate(&render_info, model_num, orient, v);
+	model_render_queue(&render_info, Current_scene, model_num, orient, v);
 
 	return ade_set_args(L, "i", 0);
 }

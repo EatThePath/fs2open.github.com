@@ -186,7 +186,7 @@ namespace animation {
 	class ModelAnimationSegmentTranslation : public ModelAnimationSegment {
 		struct instance_data {
 			vec3d m_actualVelocity;
-			vec3d m_actualTarget; //Usually won't be needed, but if vel + angle is specified, not all angles necessarily end simultaneously.
+			vec3d m_actualTarget;
 			vec3d m_actualTime;
 			tl::optional<vec3d> m_actualAccel;
 			tl::optional<vec3d> m_accelTime;
@@ -204,6 +204,7 @@ namespace animation {
 		tl::optional<float> m_time;
 		tl::optional<vec3d> m_acceleration;
 		enum class CoordinateSystem { COORDS_PARENT, COORDS_LOCAL_AT_START, COORDS_LOCAL_CURRENT } m_coordType;
+		bool m_isAbsolute;
 
 	private:
 
@@ -214,7 +215,7 @@ namespace animation {
 		void exchangeSubmodelPointers(ModelAnimationSet& replaceWith) override;
 	public:
 		static std::shared_ptr<ModelAnimationSegment> parser(ModelAnimationParseHelper* data);
-		ModelAnimationSegmentTranslation(std::shared_ptr<ModelAnimationSubmodel> submodel, tl::optional<vec3d> target, tl::optional<vec3d> velocity, tl::optional<float> time, tl::optional<vec3d> acceleration, CoordinateSystem coordType = CoordinateSystem::COORDS_PARENT);
+		ModelAnimationSegmentTranslation(std::shared_ptr<ModelAnimationSubmodel> submodel, tl::optional<vec3d> target, tl::optional<vec3d> velocity, tl::optional<float> time, tl::optional<vec3d> acceleration, CoordinateSystem coordType = CoordinateSystem::COORDS_PARENT, bool isAbsolute = false);
 
 	};
 
@@ -228,8 +229,12 @@ namespace animation {
 		//PMI ID -> Instance Data
 		std::map<int, instance_data> m_instances;
 
+		std::shared_ptr<ModelAnimationSubmodel> m_submodel;
+		tl::optional<vec3d> m_position;
+
 		//configurables:
 	public:
+		float m_radius;
 		gamesnd_id m_start;
 		gamesnd_id m_end;
 		gamesnd_id m_during;
@@ -242,12 +247,13 @@ namespace animation {
 		void executeAnimation(const ModelAnimationSubmodelBuffer& state, float timeboundLower, float timeboundUpper, ModelAnimationDirection direction, int pmi_id) override;
 		void exchangeSubmodelPointers(ModelAnimationSet& replaceWith) override;
 
-		void playStartSnd(int pmi_id);
-		void playEndSnd(int pmi_id);
+		sound_handle playSnd(polymodel_instance* pmi, const gamesnd_id& sound, bool loop);
+		void playStartSnd(polymodel_instance* pmi);
+		void playEndSnd(polymodel_instance* pmi);
 
 	public:
 		static std::shared_ptr<ModelAnimationSegment> parser(ModelAnimationParseHelper* data);
-		ModelAnimationSegmentSoundDuring(std::shared_ptr<ModelAnimationSegment> segment, gamesnd_id start, gamesnd_id end, gamesnd_id during, bool flipIfReversed = false);
+		ModelAnimationSegmentSoundDuring(std::shared_ptr<ModelAnimationSegment> segment, gamesnd_id start, gamesnd_id end, gamesnd_id during, bool flipIfReversed = false, float radius = 0.0f, std::shared_ptr<ModelAnimationSubmodel> submodel = nullptr, tl::optional<vec3d> position = tl::nullopt);
 
 	};
 	
