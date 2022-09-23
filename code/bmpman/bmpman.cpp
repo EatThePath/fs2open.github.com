@@ -1272,7 +1272,7 @@ bool bm_load_and_parse_eff(const char *filename, int dir_type, int *nframes, int
 	}
 	catch (const parse::ParseException& e)
 	{
-		nprintf(("BpMan","BMPMAN: Unable to parse '%s'!  Error message = %s.\n", filename, e.what()));
+		nprintf(("BmpMan","BMPMAN: Unable to parse '%s'!  Error message = %s.\n", filename, e.what()));
 		unpause_parse();
 		return false;
 	}
@@ -1291,13 +1291,13 @@ bool bm_load_and_parse_eff(const char *filename, int dir_type, int *nframes, int
 	} else if (!stricmp(NOX("pcx"), ext)) {
 		c_type = BM_TYPE_PCX;
 	} else {
-		nprintf(("BpMan","BMPMAN: Unknown file type in EFF parse!\n"));
+		nprintf(("BmpMan","BMPMAN: Unknown file type in EFF parse!\n"));
 		return false;
 	}
 
 	// did we do anything?
 	if (c_type == BM_TYPE_NONE || frames == 0) {
-		nprintf(("BpMan","BMPMAN: EFF parse ERROR!\n"));
+		nprintf(("BmpMan","BMPMAN: EFF parse ERROR!\n"));
 		return false;
 	}
 
@@ -1526,12 +1526,12 @@ int bm_load_animation(const char *real_filename, int *nframes, int *fps, int *ke
 	// it's an effect file, any readable image type with eff being txt
 	if (type == BM_TYPE_EFF) {
 		if (!bm_load_and_parse_eff(filename, dir_type, &anim_frames, &anim_fps, &key, &eff_type)) {
-			nprintf(("BpMan","BMPMAN: Error reading EFF\n"));
+			nprintf(("BmpMan","BMPMAN: Error reading EFF\n"));
 			if (img_cfp != nullptr)
 				cfclose(img_cfp);
 			return -1;
 		} else {
-			nprintf(("BMPMAN: Found EFF (%s) with %d frames at %d fps.\n", filename, anim_frames, anim_fps));
+			nprintf(("BmpMan","BMPMAN: Found EFF (%s) with %d frames at %d fps.\n", filename, anim_frames, anim_fps));
 		}
 		if (anim_fps == 0) {
 			Error(LOCATION, "animation (%s) has invalid fps of 0, fix this!", filename);
@@ -2623,7 +2623,7 @@ void bm_page_in_stop() {
 		}
 	}
 
-	nprintf(("BpMan","BMPMAN: %d/%d bitmap slots in use.\n", total_bitmaps, total_slots));
+	nprintf(("BmpMan","BMPMAN: %d/%d bitmap slots in use.\n", total_bitmaps, total_slots));
 #endif
 
 	Bm_paging = 0;
