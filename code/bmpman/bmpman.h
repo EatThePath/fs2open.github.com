@@ -698,4 +698,6 @@ bool bm_validate_filename(const SCP_string& file, bool single_frame, bool animat
 
 SDL_Surface* bm_to_sdl_surface(int handle);
 
+ubyte* bm_generate(int* handle, ubyte r, ubyte g, ubyte b, ubyte a, const vec2d& source_dimensions);
+
 #endif

@@ -8,6 +8,7 @@
 */
 #ifndef NDEBUG
 #define BMPMAN_NDEBUG
+#include "globalincs/pstypes.h"
 #endif
 
 #define WIN32_LEAN_AND_MEAN
@@ -3344,4 +3345,22 @@ SDL_Surface* bm_to_sdl_surface(int handle) {
 
 	return bitmapSurface;
 
+}
+
+ubyte* bm_generate(int* handle, ubyte r, ubyte g, ubyte b, ubyte a, const vec2d& source_dimensions)
+{
+	auto size = (size_t)(source_dimensions.x * source_dimensions.y * 4); // RGBA format
+
+	auto buffer = new ubyte[size];
+	for(size_t i=0;i<size;i+=4){
+		buffer[i] = r;
+		buffer[i+1] = g;
+		buffer[i+2] = b;
+		buffer[i+3] = a;
+	}
+
+	auto id = bm_create(32, source_dimensions.x, source_dimensions.y, buffer,BMP_TEX_OTHER);
+	*handle =id;
+	nprintf(("bmpman","bmpman asked to generate a texture, index %i\n",id));
+	return buffer;
 }

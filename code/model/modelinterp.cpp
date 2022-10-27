@@ -2951,6 +2951,8 @@ int texture_info::SetTexture(int n_tex)
 
 		this->total_time = (num_frames / ((fps > 0) ? (float)fps : 1.0f));
 	}
+	if(original_texture < 0)
+		original_texture = texture;
 
 	return texture;
 }

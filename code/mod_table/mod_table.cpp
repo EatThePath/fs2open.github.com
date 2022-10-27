@@ -7,9 +7,14 @@
  * as the "mod table", and contains many misc FSO specific settings.
  */
 
+#include "bmpman/bmpman.h"
 #include "gamesnd/eventmusic.h"
 #include "def_files/def_files.h"
+#include "globalincs/pstypes.h"
+#include "globalincs/systemvars.h"
 #include "globalincs/version.h"
+#include "globalincs/vmallocator.h"
+#include "graphics/color.h"
 #include "graphics/shadows.h"
 #include "localization/localize.h"
 #include "mission/missioncampaign.h"
@@ -109,6 +114,17 @@ leadIndicatorBehavior Lead_indicator_behavior;
 shadow_disable_overrides Shadow_disable_overrides {false, false, false, false};
 float Thruster_easing;
 bool Always_use_distant_firepoints;
+
+float blank_specular_value;
+float blank_gloss_value;
+
+SCP_vector<ubyte*> blank_textures;
+int blank_glow_texture = -1;
+int blank_reflect_texture = -1;
+int blank_normal_texture = -1;
+int blank_diffuse_texture = -1;
+int blank_ao_texture = -1;
+int blank_misc_texture = -1;
 
 void mod_table_set_version_flags();
 
@@ -680,6 +696,13 @@ void parse_mod_table(const char *filename)
 
 		}
 
+		if (optional_string("$Default gloss value:"))
+			stuff_float(&blank_gloss_value);
+
+		if (optional_string("$Default specular value:"))
+			stuff_float(&blank_specular_value);
+
+
 		optional_string("#NETWORK SETTINGS");
 
 		if (optional_string("$FS2NetD port:")) {
@@ -1013,6 +1036,32 @@ void mod_table_post_process()
 		Show_subtitle_screen_adjusted_res[1] = (int)(Show_subtitle_screen_base_res[1] / aspect_quotient);
 	}
 	mprintf(("Game Settings Table: Show-subtitle adjusted resolution is (%d, %d)\n", Show_subtitle_screen_adjusted_res[0], Show_subtitle_screen_adjusted_res[1]));
+
+	vec2d blank_size=vec2d();
+	blank_size.x=16;
+	blank_size.y=16;
+	ubyte r ,g, b, a;
+	//glow
+	r = 0; g = 0; b = 0; a = 0;
+	ubyte* temp = bm_generate(&blank_glow_texture, r,g,b,a, blank_size);
+	blank_textures.push_back(temp);
+
+	//specular
+	hdr_color reflect_color = hdr_color(blank_specular_value,blank_specular_value,blank_specular_value,blank_gloss_value);
+	reflect_color.fill_rgba_8bpp(&r,&b,&g,&a);
+	temp = bm_generate(&blank_reflect_texture, r,g,b,a, blank_size);
+	blank_textures.push_back(temp);
+
+	//ambient
+	r = 255; g = 255; b = 255; a = 255;
+	temp = bm_generate(&blank_ao_texture, r,g,b,a, blank_size);
+	blank_textures.push_back(temp);
+
+	//utility
+	r = 0; g = 0; b = 0; a = 0;
+	temp = bm_generate(&blank_misc_texture, r,g,b,a, blank_size);
+	blank_textures.push_back(temp);
+
 }
 
 bool mod_supports_version(int major, int minor, int build)
@@ -1109,6 +1158,9 @@ void mod_table_reset()
 	Lead_indicator_behavior = leadIndicatorBehavior::DEFAULT;
 	Thruster_easing = 0;
 	Always_use_distant_firepoints = false;
+
+	blank_specular_value = 0.0f;
+	blank_gloss_value = 0.0f;
 }
 
 void mod_table_set_version_flags()
