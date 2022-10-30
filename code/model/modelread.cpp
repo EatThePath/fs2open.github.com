@@ -3094,7 +3094,7 @@ void model_load_texture(polymodel *pm, int i, char *file)
 
 		tspec->LoadTexture(tmp_name, pm->filename);
 		//If we can't load a specular texture here, use the default
-		if ((tspec->GetTexture() <= 0 && tspecgloss->GetTexture() <= 0)){
+		if ((tspec->GetTexture() < 0 && tspecgloss->GetTexture() < 0)){
 			tspecgloss->SetTexture(blank_reflect_texture);
 		}
 	}
@@ -3105,12 +3105,16 @@ void model_load_texture(polymodel *pm, int i, char *file)
 	texture_info *tnorm = &tmap->textures[TM_NORMAL_TYPE];
 	if ( (!Cmdline_normal && !Fred_running) || (tbase->GetTexture() < 0) ) {
 		tnorm->clear();
+		tnorm->SetTexture(blank_normal_texture);
 	} else {
 		strcpy_s(tmp_name, file);
 		strcat_s(tmp_name, "-normal");
 		strlwr(tmp_name);
 
 		tnorm->LoadTexture(tmp_name, pm->filename);
+		if (tnorm->GetTexture() < 0){
+			tnorm->SetTexture(blank_normal_texture);
+		}
 	}
 
 	// try to get a height map too
@@ -3162,8 +3166,9 @@ void model_load_texture(polymodel *pm, int i, char *file)
 	//Specular is always true now, to be removed next.
 	//if ((tspec->GetTexture() > 0 || tspecgloss->GetTexture() > 0) && Cmdline_spec)
 	shader_flags |= SDR_FLAG_MODEL_SPEC_MAP;
-	if (tnorm->GetTexture() > 0 && Cmdline_normal)
-		shader_flags |= SDR_FLAG_MODEL_NORMAL_MAP;
+//	if (tnorm->GetTexture() > 0 && Cmdline_normal)
+	shader_flags |= SDR_FLAG_MODEL_NORMAL_MAP;
+
 	if (theight->GetTexture() > 0 && Cmdline_height)
 		shader_flags |= SDR_FLAG_MODEL_HEIGHT_MAP;
 	if (Cmdline_env) // always render envmaps, they contribue lightning no matter what textures are avaliable.

@@ -105,6 +105,8 @@ extern int blank_reflect_texture;
 extern int blank_glow_texture;
 extern int blank_ao_texture;
 extern int blank_misc_texture;
+extern int blank_normal_texture;
+extern float blank_gloss_value;
 void mod_table_init();
 void mod_table_post_process();
 

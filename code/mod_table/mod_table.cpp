@@ -8,6 +8,7 @@
  */
 
 #include "bmpman/bmpman.h"
+#include "cmdline/cmdline.h"
 #include "gamesnd/eventmusic.h"
 #include "def_files/def_files.h"
 #include "globalincs/pstypes.h"
@@ -1046,6 +1047,10 @@ void mod_table_post_process()
 	ubyte* temp = bm_generate(&blank_glow_texture, r,g,b,a, blank_size);
 	blank_textures.push_back(temp);
 
+	if(!Cmdline_spec){
+		blank_specular_value = 0.0f;
+		blank_gloss_value = 0.0f;
+	}
 	//specular
 	hdr_color reflect_color = hdr_color(blank_specular_value,blank_specular_value,blank_specular_value,blank_gloss_value);
 	reflect_color.fill_rgba_8bpp(&r,&b,&g,&a);
@@ -1060,6 +1065,10 @@ void mod_table_post_process()
 	//utility
 	r = 0; g = 0; b = 0; a = 0;
 	temp = bm_generate(&blank_misc_texture, r,g,b,a, blank_size);
+	blank_textures.push_back(temp);
+	//normal
+	r = 127; g = 127; b = 127; a = 127;
+	temp = bm_generate(&blank_normal_texture, r,g,b,a, blank_size);
 	blank_textures.push_back(temp);
 
 }
@@ -1159,8 +1168,14 @@ void mod_table_reset()
 	Thruster_easing = 0;
 	Always_use_distant_firepoints = false;
 
-	blank_specular_value = 0.0f;
-	blank_gloss_value = 0.0f;
+	if(! Cmdline_spec){
+		blank_specular_value = 0.0f;
+		blank_gloss_value = 0.6f;
+	}
+	else {
+		blank_specular_value = 0.0f;
+		blank_gloss_value = 0.0f;
+	}
 }
 
 void mod_table_set_version_flags()

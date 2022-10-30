@@ -1239,6 +1239,12 @@ int bm_load(const SCP_string& filename, int dir_type) {
 	return bm_load(filename.c_str(), dir_type);
 }
 
+void bm_use(const int handle){
+	bitmap_entry *be;
+	be = bm_get_entry(handle);
+	be->load_count++;
+}
+
 bool bm_load_and_parse_eff(const char *filename, int dir_type, int *nframes, int *nfps, int *key, BM_TYPE *type) {
 	int frames = 0, fps = 30, keyframe = 0;
 	char ext[8];
@@ -1340,12 +1346,12 @@ static int bm_load_image_data(int handle, int bpp, ushort flags, bool nodebug)
 
 		if (be->type != BM_TYPE_USER && !nodebug) {
 			if (bmp->data == 0)
-				nprintf(("BmpMan", "Loading %s for the first time.\n", be->filename));
+				nprintf(("BmpMan", "Loading %s for the first time. Handle %i\n", be->filename, handle));
 		}
 
 		if (!Bm_paging) {
 			if (be->type != BM_TYPE_USER && !nodebug)
-				nprintf(("Paging", "Loading %s (%dx%dx%d)\n", be->filename, bmp->w, bmp->h, true_bpp));
+				nprintf(("Paging", "Loading %s (%dx%dx%d) handle %i\n", be->filename, bmp->w, bmp->h, true_bpp,handle));
 		}
 
 		// select proper format
@@ -3149,7 +3155,7 @@ int bm_unload_fast(int handle, int clear_render_targets) {
 	Assert(be->handle == handle);		// INVALID BITMAP HANDLE!
 
 	// unlike bm_unload(), we handle each frame of an animation separately, for safer use in the graphics API
-	nprintf(("BmpMan", "Fast-unloading %s.  %dx%dx%d\n", be->filename, bmp->w, bmp->h, bmp->bpp));
+	nprintf(("BmpMan", "Fast-unloading %s.  %dx%dx%d Handle %i\n", be->filename, bmp->w, bmp->h, bmp->bpp, handle));
 	bm_free_data_fast(handle);		// clears flags, bbp, data, etc
 
 	return 1;

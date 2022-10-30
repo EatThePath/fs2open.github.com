@@ -128,9 +128,7 @@ uniform sampler2DArray sSpecmap;
 uniform samplerCube sEnvmap;
 uniform samplerCube sIrrmap;
 #endif
-#ifdef FLAG_NORMAL_MAP
 uniform sampler2DArray sNormalmap;
-#endif
 uniform sampler2DArray sAmbientmap;
 #ifdef FLAG_ANIMATED
 uniform sampler2D sFramebuffer;
@@ -226,8 +224,7 @@ void main()
 	vec2 aoFactors = texture(sAmbientmap, vec3(texCoord, float(sAmbientmapIndex))).xy;
 
 	vec3 unitNormal = normalize(vertIn.normal);
-	vec3 normal = unitNormal;
-#ifdef FLAG_NORMAL_MAP
+	vec3 normal = unitNormal; 
    // Normal map - convert from DXT5nm
    vec2 normalSample;
    normal.rg = normalSample = (texture(sNormalmap, vec3(texCoord, float(sNormalmapIndex))).ag * 2.0) - 1.0;
@@ -238,8 +235,7 @@ void main()
    if (norm > 0.0)
       normal /= norm;
    else
-      normal = unitNormal;
-#endif
+      normal = unitNormal; 
 
 #ifdef FLAG_ANIMATED
    vec2 distort = vec2(cos(vertIn.position.x*vertIn.position.w*0.005+anim_timer*20.0)*sin(vertIn.position.y*vertIn.position.w*0.005),sin(vertIn.position.x*vertIn.position.w*0.005+anim_timer*20.0)*cos(vertIn.position.y*vertIn.position.w*0.005))*0.03;

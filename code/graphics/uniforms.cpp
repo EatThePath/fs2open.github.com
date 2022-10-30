@@ -6,6 +6,7 @@
 #include "light.h"
 #include "globalincs/systemvars.h"
 #include "shadows.h"
+#include "mod_table/mod_table.h"
 
 namespace {
 void scale_matrix(matrix4& mat, const vec3d& scale) {
@@ -93,7 +94,7 @@ void convert_model_material(model_uniform_data* data_out,
 			data_out->emissionFactor.xyz.z = gr_light_zero[2];
 		}
 
-		data_out->defaultGloss = 0.6f;
+		data_out->defaultGloss = int(blank_gloss_value*255.0f);
 	}
 
 	if (shader_flags & SDR_FLAG_MODEL_DIFFUSE_MAP) {
