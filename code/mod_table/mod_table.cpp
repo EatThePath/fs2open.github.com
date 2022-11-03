@@ -1055,20 +1055,24 @@ void mod_table_post_process()
 	hdr_color reflect_color = hdr_color(blank_specular_value,blank_specular_value,blank_specular_value,blank_gloss_value);
 	reflect_color.fill_rgba_8bpp(&r,&b,&g,&a);
 	temp = bm_generate(&blank_reflect_texture, r,g,b,a, blank_size);
+	bm_use(blank_reflect_texture);
 	blank_textures.push_back(temp);
 
 	//ambient
 	r = 255; g = 255; b = 255; a = 255;
 	temp = bm_generate(&blank_ao_texture, r,g,b,a, blank_size);
+	bm_use(blank_ao_texture);
 	blank_textures.push_back(temp);
 
 	//utility
 	r = 0; g = 0; b = 0; a = 0;
 	temp = bm_generate(&blank_misc_texture, r,g,b,a, blank_size);
+	bm_use(blank_misc_texture);
 	blank_textures.push_back(temp);
 	//normal
 	r = 127; g = 127; b = 127; a = 127;
 	temp = bm_generate(&blank_normal_texture, r,g,b,a, blank_size);
+	bm_use(blank_normal_texture);
 	blank_textures.push_back(temp);
 
 }
@@ -1168,9 +1172,9 @@ void mod_table_reset()
 	Thruster_easing = 0;
 	Always_use_distant_firepoints = false;
 
-	if(! Cmdline_spec){
-		blank_specular_value = 0.0f;
-		blank_gloss_value = 0.6f;
+	if(Cmdline_spec){
+		blank_specular_value = 0.03f;
+		blank_gloss_value = 0.4f;
 	}
 	else {
 		blank_specular_value = 0.0f;
