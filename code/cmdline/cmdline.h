@@ -80,12 +80,10 @@ extern int Cmdline_ballistic_gauge;
 extern int Cmdline_dualscanlines;
 extern int Cmdline_orb_radar;
 extern int Cmdline_rearm_timer;
-extern int Cmdline_targetinfo;
 
 // Gameplay related
 extern int Cmdline_ship_choice_3d;
 extern int Cmdline_weapon_choice_3d;
-extern int Cmdline_warp_flash;
 extern int Cmdline_autopilot_interruptable;
 extern int Cmdline_stretch_menu;
 extern int Cmdline_no_screenshake;
@@ -156,6 +154,7 @@ extern bool Cmdline_graphics_debug_output;
 extern bool Cmdline_log_to_stdout;
 extern bool Cmdline_slow_frames_ok;
 extern bool Cmdline_lua_devmode;
+extern bool Cmdline_override_data;
 
 enum class WeaponSpewType { NONE = 0, STANDARD, ALL };
 extern WeaponSpewType Cmdline_spew_weapon_stats;

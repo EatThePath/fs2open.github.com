@@ -286,6 +286,9 @@ typedef struct cockpit_display {
 	char name[MAX_FILENAME_LEN];
 } cockpit_display;
 
+extern bool disableCockpits;
+extern bool cockpitActive;
+
 extern SCP_vector<cockpit_display> Player_displays;
 
 typedef struct cockpit_display_info {
@@ -450,7 +453,15 @@ typedef struct ship_flag_name {
 } ship_flag_name;
 
 extern ship_flag_name Ship_flag_names[];
-extern const int Num_ship_flag_names;
+extern const size_t Num_ship_flag_names;
+
+typedef struct wing_flag_name {
+	Ship::Wing_Flags flag;
+	char flag_name[TOKEN_LENGTH];
+} wing_flag_name;
+
+extern wing_flag_name Wing_flag_names[];
+extern const size_t Num_wing_flag_names;
 
 #define DEFAULT_SHIP_PRIMITIVE_SENSOR_RANGE		10000	// Goober5000
 
@@ -672,7 +683,7 @@ public:
 
 	int	next_engine_stutter;				// timestamp to time the engine stuttering when a ship dies
 
-	fix base_texture_anim_frametime;		// Goober5000 - zero mark for texture animations
+	TIMESTAMP base_texture_anim_timestamp;	// Goober5000 - zero mark for texture animations
 
 	float total_damage_received;        // total damage received (for scoring purposes)
 	float damage_ship[MAX_DAMAGE_SLOTS];    // damage applied from each player
@@ -746,8 +757,7 @@ public:
 	//Animated Shader effects
 	int shader_effect_num;
 	int shader_effect_duration;
-	int shader_effect_start_time;
-	bool shader_effect_active;
+	TIMESTAMP shader_effect_timestamp;
 
 	float alpha_mult;
 
@@ -867,10 +877,10 @@ extern int ship_find_exited_ship_by_name( const char *name );
 extern int ship_find_exited_ship_by_signature( int signature);
 
 // Stuff for overall ship status, useful for reference by sexps and scripts.  Status changes occur in the same frame as mission log entries.
-enum ShipStatus
+enum class ShipStatus
 {
 	// A ship is on the arrival list as a parse object
-	NOT_YET_PRESENT,
+	NOT_YET_PRESENT = 0,
 
 	// A ship is currently in-mission, and its objp and shipp pointers are valid
 	PRESENT,
@@ -1255,8 +1265,10 @@ public:
 
 	float	max_shield_recharge;
 
-	float	hull_repair_rate;				//How much of the hull is repaired every second
-	float	subsys_repair_rate;		//How fast 
+	float	hull_repair_rate;				// How much of the hull is repaired every second
+	float	subsys_repair_rate;				// How much of the subsystem is repaired every second
+	float   hull_repair_max;                // Maximum percent that hull can self repair --wookieejedi
+	float   subsys_repair_max;              // Maximum percent that subsystems can self repair --wookieejedi
 
 	float	sup_hull_repair_rate;
 	float	sup_shield_repair_rate;
@@ -1590,8 +1602,7 @@ extern void change_ship_type(int n, int ship_type, int by_sexp = 0);
 extern void ship_process_pre( object * objp, float frametime );
 extern void ship_process_post( object * objp, float frametime );
 extern void ship_render( object * obj, model_draw_list * scene );
-extern void ship_render_cockpit( object * objp);
-extern void ship_render_show_ship_cockpit( object * objp);
+extern void ship_render_player_ship( object * objp);
 extern void ship_delete( object * objp );
 extern int ship_check_collision_fast( object * obj, object * other_obj, vec3d * hitpos );
 extern int ship_get_num_ships();
@@ -1706,6 +1717,7 @@ extern int ship_find_num_turrets(object *objp);
 
 extern void compute_slew_matrix(matrix *orient, angles *a);
 extern void ship_get_eye( vec3d *eye_pos, matrix *eye_orient, object *obj, bool do_slew = true, bool from_origin = false);		// returns in eye the correct viewing position for the given object
+extern void ship_get_eye_local(vec3d* eye_pos, matrix* eye_orient, object* obj, bool do_slew = true);		// returns the eye data, local to the ship
 
 extern ship_subsys *ship_find_first_subsys(ship *sp, int subsys_type, vec3d *attacker_pos = nullptr);
 extern ship_subsys *ship_get_indexed_subsys(ship *sp, int index);	// returns index'th subsystem of this ship

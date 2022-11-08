@@ -1364,7 +1364,7 @@ int aifft_rotate_turret(object *objp, ship *shipp, ship_subsys *ss, object *lep,
 			vm_vec_scale_sub2(&target_moving_direction, &objp->phys_info.vel, wip->vel_inherit_amount);
 		}
 
-		if (tp->flags[Model::Subsystem_Flags::Turret_distant_firepoint]) {
+		if (tp->flags[Model::Subsystem_Flags::Turret_distant_firepoint] || Always_use_distant_firepoints) {
 			//The firing point of this turret is so far away from the its center that we should consider this for firing calculations
 			//This will do the enemy position prediction based on their relative position and speed to the firing point, not the turret center.
 			vec3d fire_pos, fire_vec;
@@ -1651,11 +1651,21 @@ void turret_set_next_fire_timestamp(int weapon_num, weapon_info *wip, ship_subsy
 			if (wip->wi_flags[Weapon::Info_Flags::Flak]) {
 				wait *= aip->ai_ship_fire_delay_scale_friendly * 0.5f;
 				if (aip->ai_class_autoscale)
-					wait += (Num_ai_classes - aip->ai_class - 1) * 40.0f;
+				{
+					if (The_mission.ai_profile->flags[AI::Profile_Flags::Adjusted_AI_class_autoscale])
+						wait += (ai_get_autoscale_index(Num_ai_classes) - ai_get_autoscale_index(aip->ai_class) - 1) * 40.0f;
+					else
+						wait += (Num_ai_classes - aip->ai_class - 1) * 40.0f;
+				}
 			} else {
 				wait *= aip->ai_ship_fire_delay_scale_friendly;
 				if (aip->ai_class_autoscale)
-					wait += (Num_ai_classes - aip->ai_class - 1) * 100.0f;
+				{
+					if (The_mission.ai_profile->flags[AI::Profile_Flags::Adjusted_AI_class_autoscale])
+						wait += (ai_get_autoscale_index(Num_ai_classes) - ai_get_autoscale_index(aip->ai_class) - 1) * 100.0f;
+					else
+						wait += (Num_ai_classes - aip->ai_class - 1) * 100.0f;
+				}
 			}
 		} else {
 			// flak guns need to fire more rapidly
@@ -1666,13 +1676,23 @@ void turret_set_next_fire_timestamp(int weapon_num, weapon_info *wip, ship_subsy
 					wait *= aip->ai_ship_fire_delay_scale_hostile * 0.5f;
 				}	
 				if (aip->ai_class_autoscale)
-					wait += (Num_ai_classes - aip->ai_class - 1) * 40.0f;
+				{
+					if (The_mission.ai_profile->flags[AI::Profile_Flags::Adjusted_AI_class_autoscale])
+						wait += (ai_get_autoscale_index(Num_ai_classes) - ai_get_autoscale_index(aip->ai_class) - 1) * 40.0f;
+					else
+						wait += (Num_ai_classes - aip->ai_class - 1) * 40.0f;
+				}
 
 			} else if (wip->wi_flags[Weapon::Info_Flags::Huge]) {
 				// make huge weapons fire independently of team
 				wait *= aip->ai_ship_fire_delay_scale_friendly;
 				if (aip->ai_class_autoscale)
-					wait += (Num_ai_classes - aip->ai_class - 1) * 100.0f;
+				{
+					if (The_mission.ai_profile->flags[AI::Profile_Flags::Adjusted_AI_class_autoscale])
+						wait += (ai_get_autoscale_index(Num_ai_classes) - ai_get_autoscale_index(aip->ai_class) - 1) * 100.0f;
+					else
+						wait += (Num_ai_classes - aip->ai_class - 1) * 100.0f;
+				}
 			} else {
 				// give team friendly an advantage
 				if (Ships[aip->shipnum].team == Player_ship->team) {
@@ -1681,7 +1701,12 @@ void turret_set_next_fire_timestamp(int weapon_num, weapon_info *wip, ship_subsy
 					wait *= aip->ai_ship_fire_delay_scale_hostile;
 				}	
 				if (aip->ai_class_autoscale)
-					wait += (Num_ai_classes - aip->ai_class - 1) * 100.0f;
+				{
+					if (The_mission.ai_profile->flags[AI::Profile_Flags::Adjusted_AI_class_autoscale])
+						wait += (ai_get_autoscale_index(Num_ai_classes) - ai_get_autoscale_index(aip->ai_class) - 1) * 100.0f;
+					else
+						wait += (Num_ai_classes - aip->ai_class - 1) * 100.0f;
+				}
 			}
 		}
 		// vary wait time +/- 10%
@@ -2349,7 +2374,7 @@ void ai_turret_execute_behavior(ship *shipp, ship_subsys *ss)
 
 		// If the barrel of this turret is long, we shouldn't try to fire if the enemy is under the gun.
 		// Note that this isn't the same thing as min_range, which is unrelated to barrel length.
-		if (tp->flags[Model::Subsystem_Flags::Turret_distant_firepoint]) {
+		if (tp->flags[Model::Subsystem_Flags::Turret_distant_firepoint] || Always_use_distant_firepoints) {
 			vec3d fpoint, fvec;
 			ship_get_global_turret_gun_info(objp, ss, &fpoint, &fvec, use_angles, &predicted_enemy_pos);
 			auto barrel_length = vm_vec_dist(&fpoint, &gpos);

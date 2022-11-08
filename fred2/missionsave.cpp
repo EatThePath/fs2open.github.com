@@ -762,7 +762,7 @@ int CFred_mission_save::save_asteroid_fields()
 		parse_comments();
 		save_vector(Asteroid_field.max_bound);
 
-		if (Asteroid_field.has_inner_bound == 1) {
+		if (Asteroid_field.has_inner_bound) {
 			if (optional_string_fred("+Inner Bound:")) {
 				parse_comments();
 			} else {
@@ -778,7 +778,7 @@ int CFred_mission_save::save_asteroid_fields()
 			save_vector(Asteroid_field.inner_max_bound);
 		}
 
-		if (!Asteroid_target_ships.empty()) {
+		if (!Asteroid_field.target_names.empty()) {
 			fso_comment_push(";;FSO 22.0.0;;");
 			if (optional_string_fred("$Asteroid Targets:")) {
 				parse_comments();
@@ -787,7 +787,7 @@ int CFred_mission_save::save_asteroid_fields()
 				fout_version("\n$Asteroid Targets: (");
 			}
 
-			for (SCP_string& name : Asteroid_target_ships) {				
+			for (SCP_string& name : Asteroid_field.target_names) {
 				fout(" \"%s\"", name.c_str());
 			}
 
@@ -841,9 +841,27 @@ int CFred_mission_save::save_bitmaps()
 			fout(" )");
 		}
 
-		required_string_fred("+Neb2Flags:");
-		parse_comments();
-		fout(" %d", Neb2_poof_flags);
+		if (Mission_save_format == FSO_FORMAT_RETAIL) {
+			if (optional_string_fred("+Neb2Flags:")) {
+				parse_comments();
+			} else {
+				fout("\n+Neb2Flags:");
+			}
+			fout(" %d", Neb2_poof_flags);
+		} else {
+			if (optional_string_fred("+Neb2 Poofs List:")) {
+				parse_comments();
+			} else {
+				fout("\n+Neb2 Poofs List:");
+			}
+			fout(" (");
+			for (i = 0; i < (int)Poof_info.size(); ++i) {
+				if (Neb2_poof_flags & (1 << i)) {
+					fout(" \"%s\" ", Poof_info[i].name);
+				}
+			}
+			fout(") ");
+		}
 	}
 	// neb 1 stuff
 	else {
@@ -2968,29 +2986,29 @@ int CFred_mission_save::save_music()
 	bypass_comment(";;FSO 3.6.8;; $Substitute Music:");
 
 	// old stuff
-	if (Mission_music[SCORE_DEBRIEF_SUCCESS] != event_music_get_spooled_music_index("Success")) {
+	if (Mission_music[SCORE_DEBRIEFING_SUCCESS] != event_music_get_spooled_music_index("Success")) {
 		if (optional_string_fred("$Debriefing Success Music:")) {
 			parse_comments(1);
 		} else {
 			fout("\n$Debriefing Success Music:");
 		}
-		fout(" %s", Mission_music[SCORE_DEBRIEF_SUCCESS] < 0 ? "None" : Spooled_music[Mission_music[SCORE_DEBRIEF_SUCCESS]].name);
+		fout(" %s", Mission_music[SCORE_DEBRIEFING_SUCCESS] < 0 ? "None" : Spooled_music[Mission_music[SCORE_DEBRIEFING_SUCCESS]].name);
 	}
-	if (Mission_save_format != FSO_FORMAT_RETAIL && Mission_music[SCORE_DEBRIEF_AVERAGE] != event_music_get_spooled_music_index("Average")) {
+	if (Mission_save_format != FSO_FORMAT_RETAIL && Mission_music[SCORE_DEBRIEFING_AVERAGE] != event_music_get_spooled_music_index("Average")) {
 		if (optional_string_fred("$Debriefing Average Music:")) {
 			parse_comments(1);
 		} else {
 			fout("\n$Debriefing Average Music:");
 		}
-		fout(" %s", Mission_music[SCORE_DEBRIEF_AVERAGE] < 0 ? "None" : Spooled_music[Mission_music[SCORE_DEBRIEF_AVERAGE]].name);
+		fout(" %s", Mission_music[SCORE_DEBRIEFING_AVERAGE] < 0 ? "None" : Spooled_music[Mission_music[SCORE_DEBRIEFING_AVERAGE]].name);
 	}
-	if (Mission_music[SCORE_DEBRIEF_FAIL] != event_music_get_spooled_music_index("Failure")) {
+	if (Mission_music[SCORE_DEBRIEFING_FAILURE] != event_music_get_spooled_music_index("Failure")) {
 		if (optional_string_fred("$Debriefing Fail Music:")) {
 			parse_comments(1);
 		} else {
 			fout("\n$Debriefing Fail Music:");
 		}
-		fout(" %s", Mission_music[SCORE_DEBRIEF_FAIL] < 0 ? "None" : Spooled_music[Mission_music[SCORE_DEBRIEF_FAIL]].name);
+		fout(" %s", Mission_music[SCORE_DEBRIEFING_FAILURE] < 0 ? "None" : Spooled_music[Mission_music[SCORE_DEBRIEFING_FAILURE]].name);
 	}
 
 	// Goober5000 - save using the special comment prefix

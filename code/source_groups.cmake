@@ -1391,12 +1391,16 @@ add_file_folder("Scripting\\\\Api\\\\Objs"
 	scripting/api/objs/shields.h
 	scripting/api/objs/ship_bank.cpp
 	scripting/api/objs/ship_bank.h
+	scripting/api/objs/ship_registry_entry.cpp
+	scripting/api/objs/ship_registry_entry.h
 	scripting/api/objs/shipclass.cpp
 	scripting/api/objs/shipclass.h
 	scripting/api/objs/ship.cpp
 	scripting/api/objs/ship.h
 	scripting/api/objs/shiptype.cpp
 	scripting/api/objs/shiptype.h
+	scripting/api/objs/shipwepselect.cpp
+	scripting/api/objs/shipwepselect.h
 	scripting/api/objs/sound.cpp
 	scripting/api/objs/sound.h
 	scripting/api/objs/species.cpp
@@ -1586,6 +1590,8 @@ add_file_folder("Ui"
 )
 
 add_file_folder("Utils"
+	utils/base64.cpp
+	utils/base64.h
 	utils/encoding.cpp
 	utils/encoding.h
 	utils/event.h

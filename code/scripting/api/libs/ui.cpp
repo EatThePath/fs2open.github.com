@@ -29,8 +29,11 @@
 #include "mission/missioncampaign.h"
 #include "missionui/redalert.h"
 #include "network/multi.h"
+#include "network/multiteamselect.h"
 #include "playerman/managepilot.h"
 #include "radar/radarsetup.h"
+#include "ship/ship.h"
+#include "weapon/weapon.h"
 #include "scpui/SoundPlugin.h"
 #include "scpui/rocket_ui.h"
 #include "scripting/api/objs/techroom.h"
@@ -40,9 +43,11 @@
 #include "scripting/api/objs/cmd_brief.h"
 #include "scripting/api/objs/briefing.h"
 #include "scripting/api/objs/debriefing.h"
+#include "scripting/api/objs/shipwepselect.h"
 #include "scripting/api/objs/color.h"
 #include "scripting/api/objs/enums.h"
 #include "scripting/api/objs/player.h"
+#include "scripting/api/objs/texture.h"
 #include "scripting/lua/LuaTable.h"
 #include "stats/medals.h"
 #include "stats/stats.h"
@@ -234,6 +239,19 @@ ADE_FUNC(playCutscene, l_UserInterface, "string Filename, boolean RestartMusic, 
 
 	common_play_cutscene(filename, restart_music, score_index);
 	return ADE_RETURN_NIL;
+}
+
+ADE_FUNC(linkTexture, l_UserInterface, "texture texture", "Links a texture directly to librocket.", "string", "The url string for librocket, or an empty string if invalid.")
+{
+	texture_h* tex;
+
+	if (!ade_get_args(L, "o", l_Texture.GetPtr(&tex)))
+		return ade_set_error(L, "s", "");
+
+	if(tex == nullptr || !tex->isValid())
+		return ade_set_error(L, "s", "");
+	
+	return ade_set_args(L, "s", "data:image/bmpman," + std::to_string(tex->handle));
 }
 
 //**********SUBLIBRARY: UserInterface/PilotSelect
@@ -681,13 +699,14 @@ ADE_FUNC(skipTraining,
 ADE_FUNC(commitToMission,
 	l_UserInterface_Brief,
 	nullptr,
-	"Commits to the current mission with current loadout data, and starts the mission. WIP, do not use!",
-	nullptr,
-	nullptr)
+	"Commits to the current mission with current loadout data, and starts the mission. Returns an integer to represent "
+	"built-in errors or 0 if successful. 1 = general error, 2 = a player ship has no weapons, 3 = the required weapon was not found "
+	"loaded on a ship, 4 = 2 or more required weapons were not found loaded on a ship, 5 = a gap in a ship's weapon banks was discovered "
+	"and all empty banks must be at the bottom of the list, 6 = a player has no ship selected",
+	"number error",
+	"the error value")
 {
-	SCP_UNUSED(L);
-	commit_pressed();
-	return ADE_RETURN_NIL;
+	return ade_set_args(L, "i", static_cast<int>(commit_pressed(true)));
 }
 
 ADE_FUNC(drawBriefingMap,
@@ -1137,6 +1156,214 @@ ADE_FUNC(getFictionMusicName, l_UserInterface_FictionViewer, nullptr,
 	return ade_set_args(L, "s", common_music_get_filename(SCORE_FICTION_VIEWER).c_str());
 }
 
+//**********SUBLIBRARY: UserInterface/ShipWepSelect
+ADE_LIB_DERIV(l_UserInterface_ShipWepSelect,
+	"ShipWepSelect",
+	nullptr,
+	"API for accessing data related to the ship and weapon select UIs.<br><b>Warning:</b> This is an internal "
+	"API for the new UI system. This should not be used by other code and may be removed in the future!",
+	l_UserInterface);
+
+ADE_FUNC(initSelect,
+	l_UserInterface_ShipWepSelect,
+	nullptr,
+	"Initializes selection data including wing slots, ship and weapon pool, and loadout information. "
+	"Must be called before every mission regardless if ship or weapon select is actually used! "
+	"Should also be called on initialization of relevant briefing UIs such as briefing and red alert "
+	"to ensure that the ships and weapons are properly set for the current mission.",
+	nullptr,
+	nullptr)
+{
+	//Note this does all the things from common_select_init() in missionscreencommon.cpp except load UI
+	//elements into memory - Mjn
+	
+	SCP_UNUSED(L); // unused parameter
+
+	Common_team = 0;
+
+	if ((Game_mode & GM_MULTIPLAYER) && IS_MISSION_MULTI_TEAMS)
+		Common_team = Net_player->p_info.team;
+
+	common_set_team_pointers(Common_team);
+
+	ship_select_common_init(true);
+	weapon_select_common_init(true);
+
+	if ( Game_mode & GM_MULTIPLAYER ) {
+		multi_ts_common_init();
+	}
+
+	// restore loadout from Player_loadout if this is the same mission as the one previously played
+	if ( !(Game_mode & GM_MULTIPLAYER) ) {
+		if ( !stricmp(Player_loadout.filename, Game_current_mission_filename) ) {
+			wss_maybe_restore_loadout();
+			ss_synch_interface();
+			wl_synch_interface();
+		}
+	}
+
+	return ADE_RETURN_NIL;
+}
+
+ADE_FUNC(saveLoadout,
+	l_UserInterface_ShipWepSelect,
+	nullptr,
+	"Saves the current loadout to the player file. Only should be used when a mission is loaded but has not been started.",
+	nullptr,
+	nullptr)
+{
+	SCP_UNUSED(L); // unused parameter
+
+	// This could be requested before Common_team has been initialized, so let's check.
+	// Freespace.cpp will clear Common_select_inited if the player ever leaves a valid
+	// "briefing" game state, so this should be a pretty safe check to avoid the assert
+	// contained within. - Mjn
+	if (Common_select_inited) {
+		wss_save_loadout();
+	} else {
+		return ADE_RETURN_NIL;
+	}
+
+	return ADE_RETURN_NIL;
+}
+
+ADE_LIB_DERIV(l_Ship_Pool, "Ship_Pool", nullptr, nullptr, l_UserInterface_ShipWepSelect);
+ADE_INDEXER(l_Ship_Pool,
+	"number Index, number amount",
+	"Array of ship amounts available in the pool for selection in the current mission. Index is index into Ship Classes.",
+	"number",
+	"Amount of the ship that's available")
+{
+	int idx;
+	int amount;
+	if (!ade_get_args(L, "*i|i", &idx, &amount))
+		return ADE_RETURN_NIL;
+
+	if (idx < 0 || idx > ship_info_size()) {
+		return ADE_RETURN_NIL;
+	};
+
+	idx--; // Convert to Lua's 1 based index system
+
+	if (ADE_SETTING_VAR) {
+		if (amount < 0) {
+			Ss_pool[idx] = 0;
+		} else {
+			Ss_pool[idx] = amount;
+		}
+	}
+
+	return ade_set_args(L, "i", Ss_pool[idx]);
+}
+
+ADE_FUNC(__len, l_Ship_Pool, nullptr, "The number of ship classes in the pool", "number", "The number of ship classes.")
+{
+	return ade_set_args(L, "i", ship_info_size());
+}
+
+ADE_LIB_DERIV(l_Weapon_Pool, "Weapon_Pool", nullptr, nullptr, l_UserInterface_ShipWepSelect);
+ADE_INDEXER(l_Weapon_Pool,
+	"number Index, number amount",
+	"Array of weapon amounts available in the pool for selection in the current mission. Index is index into Weapon Classes.",
+	"number",
+	"Amount of the weapon that's available")
+{
+	int idx;
+	int amount;
+	if (!ade_get_args(L, "*i|i", &idx, &amount))
+		return ADE_RETURN_NIL;
+
+	if (idx < 0 || idx > weapon_info_size()) {
+		return ADE_RETURN_NIL;
+	};
+
+	idx--; // Convert to Lua's 1 based index system
+
+	if (ADE_SETTING_VAR) {
+		if (amount < 0) {
+			Wl_pool[idx] = 0;
+		} else {
+			Wl_pool[idx] = amount;
+		}
+	}
+
+	return ade_set_args(L, "i", Wl_pool[idx]);
+}
+
+ADE_FUNC(__len,
+	l_Weapon_Pool, nullptr, "The number of weapon classes in the pool", "number", "The number of weapon classes.")
+{
+	return ade_set_args(L, "i", weapon_info_size());
+}
+
+ADE_FUNC(resetSelect,
+	l_UserInterface_ShipWepSelect,
+	nullptr,
+	"Resets selection data to mission defaults including wing slots, ship and weapon pool, and loadout information",
+	nullptr,
+	nullptr)
+{
+	// Note this does all the things from ss_reset_to_default() in missionshipchoice.cpp except
+	// resetting UI elements - Mjn
+
+	SCP_UNUSED(L); // unused parameter
+
+	ss_init_pool(&Team_data[Common_team]);
+	ss_init_units();
+
+	if (!(Game_mode & GM_MULTIPLAYER)) {
+		wl_fill_slots();
+	}
+
+	return ADE_RETURN_NIL;
+}
+
+ADE_LIB_DERIV(l_Loadout_Wings, "Loadout_Wings", nullptr, nullptr, l_UserInterface_ShipWepSelect);
+ADE_INDEXER(l_Loadout_Wings,
+	"number Index",
+	"Array of loadout wing data",
+	"loadout_wing",
+	"loadout handle, or invalid handle if index is invalid")
+{
+	int idx;
+	if (!ade_get_args(L, "*i", &idx))
+		return ade_set_error(L, "o", l_Loadout_Wing.Set(ss_wing_info_h()));
+	idx--; //Convert to Lua's 1 based index system
+	return ade_set_args(L, "o", l_Loadout_Wing.Set(ss_wing_info_h(idx)));
+}
+
+ADE_FUNC(__len, l_Loadout_Wings, nullptr, "The number of loadout wings", "number", "The number of loadout wings.")
+{
+	int count = 0;
+
+	for (int i = 0; i < MAX_STARTING_WINGS; i++) {
+		if (Ss_wings[i].ss_slots[0].in_mission)
+			count++;
+	};
+
+	return ade_set_args(L, "i", count);
+}
+
+ADE_LIB_DERIV(l_Loadout_Ships, "Loadout_Ships", nullptr, nullptr, l_UserInterface_ShipWepSelect);
+ADE_INDEXER(l_Loadout_Ships,
+	"number Index",
+	"Array of loadout ship data. Slots are 1-12 where 1-4 is wing 1, 5-8 is wing 2, 9-12 is wing 3. "
+	"This is the array that is used to actually build the mission loadout on Commit.",
+	"loadout_ship",
+	"loadout handle, or nil if index is invalid")
+{
+	int idx;
+	if (!ade_get_args(L, "*i", &idx))
+		return ADE_RETURN_NIL;
+	idx--; // Convert to Lua's 1 based index system
+	return ade_set_args(L, "o", l_Loadout_Ship.Set(idx));
+}
+
+ADE_FUNC(__len, l_Loadout_Ships, nullptr, "The number of loadout ships", "number", "The number of loadout ships.")
+{
+	return ade_set_args(L, "i", MAX_WING_BLOCKS*MAX_WING_SLOTS);
+}
+
 //**********SUBLIBRARY: UserInterface/TechRoom
 ADE_LIB_DERIV(l_UserInterface_TechRoom,
 	"TechRoom",
@@ -1260,7 +1487,12 @@ ADE_VIRTVAR(StartIndex, l_UserInterface_Credits, nullptr, "The image index to be
 		LuaError(L, "This property is read only.");
 	}
 
-	return ade_set_args(L, "i", Credits_artwork_index);
+	int retv = Credits_artwork_index;
+	if (retv < 0) {
+		retv = Random::next(Credits_num_images);
+	}
+
+	return ade_set_args(L, "i", retv);
 }
 
 ADE_VIRTVAR(DisplayTime, l_UserInterface_Credits, nullptr, "The display time for each image", "number", "The display time")

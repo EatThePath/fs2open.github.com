@@ -879,7 +879,7 @@ struct model_read_deferred_tasks {
 	};
 
 	struct engine_subsystem_parse {
-		int thruster_nr;
+		SCP_string subsystem_name;
 	};
 
 	struct weapon_subsystem_parse {
@@ -897,8 +897,8 @@ struct model_read_deferred_tasks {
 	//Key: Subsystem Name
 	SCP_unordered_map<SCP_string, model_subsystem_parse, SCP_string_lcase_hash, SCP_string_lcase_equal_to> model_subsystems;
 	using model_subsystem_pair = decltype(model_subsystems)::value_type;
-	//Key: Subsystem Name
-	SCP_unordered_map<SCP_string, engine_subsystem_parse, SCP_string_lcase_hash, SCP_string_lcase_equal_to> engine_subsystems;
+	//Key: Engine Nr
+	SCP_unordered_map<int, engine_subsystem_parse> engine_subsystems;
 	using engine_subsystem_pair = decltype(engine_subsystems)::value_type;
 	//Key: Parent Subobject Nr
 	SCP_unordered_map<int, weapon_subsystem_parse> weapons_subsystems;
@@ -951,6 +951,9 @@ void model_free(polymodel* pm);
 // Call to free all existing models
 void model_free_all();
 void model_instance_free_all();
+
+// Alias to model_load, checks if a pof tech model exists and loads it if specified, otherwise loads the default pof. --wookieejedi
+int model_load(ship_info* sip, bool prefer_tech_model);
 
 // Loads a model from disk and returns the model number it loaded into.
 int model_load(const char *filename, int n_subsystems, model_subsystem *subsystems, int ferror = 1, int duplicate = 0);

@@ -2517,7 +2517,7 @@ modelread_status read_model_file_no_subsys(polymodel * pm, const char* filename,
 
 									nprintf(("wash", "Ship %s with engine wash associated with subsys %s\n", filename, engine_subsys_name));
 
-									subsystemParseList.engine_subsystems.emplace(engine_subsys_name, model_read_deferred_tasks::engine_subsystem_parse{ i });
+									subsystemParseList.engine_subsystems.emplace(i, model_read_deferred_tasks::engine_subsystem_parse{ engine_subsys_name });
 								}
 							}
 						}
@@ -2936,10 +2936,10 @@ modelread_status read_and_process_model_file(polymodel* pm, const char* filename
 	for (const auto& subsystem : deferredTasks.engine_subsystems) {
 		// start off assuming the subsys is invalid
 		int table_error = 1;
-		auto bank = &pm->thrusters[subsystem.second.thruster_nr];
+		auto bank = &pm->thrusters[subsystem.first];
 
 		for (int k = 0; k < n_subsystems; k++) {
-			if (!subsystem_stricmp(subsystems[k].subobj_name, subsystem.first.c_str())) {
+			if (!subsystem_stricmp(subsystems[k].subobj_name, subsystem.second.subsystem_name.c_str())) {
 				bank->submodel_num = subsystems[k].subobj_num;
 
 				bank->wash_info_pointer = subsystems[k].engine_wash_pointer;
@@ -3184,6 +3184,18 @@ void model_load_texture(polymodel *pm, int i, char *file)
 
 	gr_maybe_create_shader(SDR_TYPE_MODEL, shader_flags | SDR_FLAG_MODEL_LIGHT);
 	gr_maybe_create_shader(SDR_TYPE_MODEL, shader_flags | SDR_FLAG_MODEL_LIGHT | SDR_FLAG_MODEL_FOG);
+}
+
+//returns the number of the pof tech model if specified, otherwise number of pof model
+int model_load(ship_info* sip, bool prefer_tech_model)
+{
+	if (prefer_tech_model && sip->pof_file_tech[0] != '\0') {
+		// This cannot load into sip->subsystems, as this will overwrite the subsystems model_num to the
+		// techroom model, which is decidedly wrong for the mission itself.
+		return model_load(sip->pof_file_tech, 0, nullptr);
+	} else {
+		return model_load(sip->pof_file, sip->n_subsystems, &sip->subsystems[0]);
+	}
 }
 
 //returns the number of this model

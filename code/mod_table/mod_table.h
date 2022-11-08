@@ -36,6 +36,7 @@ extern int FS2NetD_port;
 extern int Default_multi_object_update_level;
 extern float Briefing_window_FOV;
 extern bool Disable_hc_message_ani;
+extern SCP_vector<SCP_string> Custom_head_anis;
 extern bool Red_alert_applies_to_delayed_ships;
 extern bool Beams_use_damage_factors;
 extern float Generic_pain_flash_factor;
@@ -82,6 +83,8 @@ extern bool Neb_affects_particles;
 extern bool Neb_affects_fireballs;
 extern std::tuple<float, float, float, float> Shadow_distances;
 extern std::tuple<float, float, float, float> Shadow_distances_cockpit;
+extern bool Show_ship_casts_shadow;
+extern bool Cockpit_shares_coordinate_space;
 extern bool Custom_briefing_icons_always_override_standard_icons;
 extern float Min_pixel_size_thruster;
 extern float Min_pixel_size_beam;
@@ -98,6 +101,7 @@ extern struct shadow_disable_overrides {
 	bool disable_techroom, disable_mission_select_weapons, disable_mission_select_ships, disable_cockpit;
 } Shadow_disable_overrides;
 extern float Thruster_easing;
+extern bool Always_use_distant_firepoints;
 
 void mod_table_init();
 void mod_table_post_process();

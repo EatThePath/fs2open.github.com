@@ -466,9 +466,6 @@ bool fred_init(std::unique_ptr<os::GraphicsOperations>&& graphicsOps)
 	// Get the default player ship
 	Default_player_model = cur_model_index = get_default_player_ship_index();
 
-	Id_select_type_start = (int)(Ship_info.size() + 2);
-	Id_select_type_jump_node = (int)(Ship_info.size() + 1);
-	Id_select_type_waypoint = (int)(Ship_info.size());
 	Fred_main_wnd -> init_tools();
 
 	Script_system.RunInitFunctions();
@@ -834,18 +831,7 @@ void clear_mission()
 	cmd_brief_reset();
 	mission_event_shutdown();
 
-	Asteroid_field.num_initial_asteroids = 0;  // disable asteroid field by default.
-	Asteroid_field.speed = 0.0f;
-	vm_vec_make(&Asteroid_field.min_bound, -1000.0f, -1000.0f, -1000.0f);
-	vm_vec_make(&Asteroid_field.max_bound,  1000.0f,  1000.0f,  1000.0f);
-	vm_vec_make(&Asteroid_field.inner_min_bound, -500.0f, -500.0f, -500.0f);
-	vm_vec_make(&Asteroid_field.inner_max_bound,  500.0f,  500.0f,  500.0f);
-	Asteroid_field.has_inner_bound = 0;
-	Asteroid_field.field_type = FT_ACTIVE;
-	Asteroid_field.debris_genre = DG_ASTEROID;
-	Asteroid_field.field_debris_type[0] = -1;
-	Asteroid_field.field_debris_type[1] = -1;
-	Asteroid_field.field_debris_type[2] = -1;
+	asteroid_level_init();
 
 	strcpy_s(Mission_parse_storm_name, "none");
 

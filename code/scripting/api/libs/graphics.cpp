@@ -856,8 +856,8 @@ ADE_FUNC(draw3dLine, l_Graphics, "vector origin, vector destination, [boolean tr
 
 // Aardwolf's test code to render a model, supposed to emulate WMC's gr.drawModel function
 ADE_FUNC(drawModel, l_Graphics, "model model, vector position, orientation orientation",
-         "Draws the given model with the specified position and orientation - Use with extreme care, may not work "
-         "properly in all scripting hooks.  Note: this method does NOT use CurrentResizeMode.",
+         "Draws the given model with the specified position and orientation.  "
+	     "Note: this method does NOT use CurrentResizeMode.",
          "number", "Zero if successful, otherwise an integer error code")
 {
 	model_h *mdl = NULL;
@@ -874,7 +874,8 @@ ADE_FUNC(drawModel, l_Graphics, "model model, vector position, orientation orien
 		return ade_set_args(L, "i", 3);
 
 	// Make sure we have a scene to use
-	if (!Current_scene)
+	// Note that this is only relevant, and thus only expected to be set, in OBJECTRENDER hooks
+	if (Script_system.IsActiveAction(CHA_OBJECTRENDER) && !Current_scene)
 		return ade_set_args(L, "i", 4);
 
 	//Handle angles
@@ -914,7 +915,14 @@ ADE_FUNC(drawModel, l_Graphics, "model model, vector position, orientation orien
 
 	render_info.set_detail_level_lock(0);
 
-	model_render_queue(&render_info, Current_scene, model_num, orient, v);
+	// If this function executes in OBJECTRENDER, and if the Current_scene is set, we can take advantage
+	// of some optimizations by adding this model to the global render queue.
+	// In all other circumstances, we need to render the model in immediate mode, which may be slow but
+	// is guaranteed to work.
+	if (Script_system.IsActiveAction(CHA_OBJECTRENDER))
+		model_render_queue(&render_info, Current_scene, model_num, orient, v);
+	else
+		model_render_immediate(&render_info, model_num, orient, v);
 
 	//OK we're done
 	gr_end_view_matrix();
@@ -929,8 +937,7 @@ ADE_FUNC(drawModel, l_Graphics, "model model, vector position, orientation orien
 
 // Wanderer
 ADE_FUNC(drawModelOOR, l_Graphics, "model Model, vector Position, orientation Orientation, [number Flags]",
-         "Draws the given model with the specified position and orientation - Use with extreme care, designed to "
-         "operate properly only in On Object Render hooks.",
+         "Draws the given model with the specified position and orientation",
          "number", "Zero if successful, otherwise an integer error code")
 {
 	model_h *mdl = NULL;
@@ -954,7 +961,8 @@ ADE_FUNC(drawModelOOR, l_Graphics, "model Model, vector Position, orientation Or
 		return ade_set_args(L, "i", 3);
 
 	// Make sure we have a scene to use
-	if (!Current_scene)
+	// Note that this is only relevant, and thus only expected to be set, in OBJECTRENDER hooks
+	if (Script_system.IsActiveAction(CHA_OBJECTRENDER) && !Current_scene)
 		return ade_set_args(L, "i", 4);
 
 	//Handle angles
@@ -966,8 +974,14 @@ ADE_FUNC(drawModelOOR, l_Graphics, "model Model, vector Position, orientation Or
 	model_render_params render_info;
 	render_info.set_flags(flags);
 
-	model_render_queue(&render_info, Current_scene, model_num, orient, v);
-
+	// If this function executes in OBJECTRENDER, and if the Current_scene is set, we can take advantage
+	// of some optimizations by adding this model to the global render queue.
+	// In all other circumstances, we need to render the model in immediate mode, which may be slow but
+	// is guaranteed to work.
+	if (Script_system.IsActiveAction(CHA_OBJECTRENDER))
+		model_render_queue(&render_info, Current_scene, model_num, orient, v);
+	else
+		model_render_immediate(&render_info, model_num, orient, v);
 	return ade_set_args(L, "i", 0);
 }
 
@@ -1505,7 +1519,8 @@ ADE_FUNC(createTexture, l_Graphics, "[number Width=512, number Height=512, enume
 	if(idx < 0)
 		return ade_set_error(L, "o", l_Texture.Set(texture_h()));
 
-	return ade_set_args(L, "o", l_Texture.Set(texture_h(idx)));
+	//Since creating a render target does not increase load count, when creating the scripting texture object we need to pass true to the constructor so that the constructor will increase the load count for us.
+	return ade_set_args(L, "o", l_Texture.Set(texture_h(idx, true)));
 }
 
 ADE_FUNC(loadTexture, l_Graphics, "string Filename, [boolean LoadIfAnimation, boolean NoDropFrames]",
@@ -1533,8 +1548,9 @@ ADE_FUNC(loadTexture, l_Graphics, "string Filename, [boolean LoadIfAnimation, bo
 
 	if(idx < 0)
 		return ade_set_error(L, "o", l_Texture.Set(texture_h()));
-
-	return ade_set_args(L, "o", l_Texture.Set(texture_h(idx)));
+	
+	//Loading increases load count, so we must pass false to the texture scripting object, so that the constructor doesn't increase the load count by itself again.
+	return ade_set_args(L, "o", l_Texture.Set(texture_h(idx, false)));
 }
 
 ADE_FUNC(drawImage,
@@ -2001,7 +2017,7 @@ ADE_FUNC(openMovie, l_Graphics, "string name, boolean looping = false",
 
 ADE_FUNC(createPersistentParticle,
 	l_Graphics,
-	"vector Position, vector Velocity, number Lifetime, number Radius, enumeration Type, [number TracerLength=-1, "
+	"vector Position, vector Velocity, number Lifetime, number Radius, [enumeration Type=PARTICLE_DEBUG, number TracerLength=-1, "
 	"boolean Reverse=false, texture Texture=Nil, object AttachedObject=Nil]",
 	"Creates a persistent particle. Persistent variables are handled specially by the engine so that this "
 	"function can return a handle to the caller. Only use this if you absolutely need it. Use createParticle if "
@@ -2025,7 +2041,7 @@ ADE_FUNC(createPersistentParticle,
 	bool rev           = false;
 	object_h* objh     = nullptr;
 	texture_h* texture = nullptr;
-	if (!ade_get_args(L, "ooffo|fboo", l_Vector.Get(&pi.pos), l_Vector.Get(&pi.vel), &pi.lifetime, &pi.rad,
+	if (!ade_get_args(L, "ooff|ofboo", l_Vector.Get(&pi.pos), l_Vector.Get(&pi.vel), &pi.lifetime, &pi.rad,
 	                  l_Enum.GetPtr(&type), &temp, &rev, l_Texture.GetPtr(&texture), l_Object.GetPtr(&objh)))
 		return ADE_RETURN_NIL;
 
@@ -2073,7 +2089,7 @@ ADE_FUNC(createPersistentParticle,
 
 ADE_FUNC(createParticle,
 	l_Graphics,
-	"vector Position, vector Velocity, number Lifetime, number Radius, enumeration Type, [number TracerLength=-1, "
+	"vector Position, vector Velocity, number Lifetime, number Radius, [enumeration Type=PARTICLE_DEBUG, number TracerLength=-1, "
 	"boolean Reverse=false, texture Texture=Nil, object AttachedObject=Nil]",
 	"Creates a non-persistent particle. Use PARTICLE_* enumerations for type."
 	"Reverse reverse animation, if one is specified"
@@ -2095,7 +2111,7 @@ ADE_FUNC(createParticle,
 	bool rev           = false;
 	object_h* objh     = nullptr;
 	texture_h* texture = nullptr;
-	if (!ade_get_args(L, "ooffo|fboo", l_Vector.Get(&pi.pos), l_Vector.Get(&pi.vel), &pi.lifetime, &pi.rad,
+	if (!ade_get_args(L, "ooff|ofboo", l_Vector.Get(&pi.pos), l_Vector.Get(&pi.vel), &pi.lifetime, &pi.rad,
 	                  l_Enum.GetPtr(&type), &temp, &rev, l_Texture.GetPtr(&texture), l_Object.GetPtr(&objh)))
 		return ADE_RETURN_FALSE;
 
@@ -2136,6 +2152,14 @@ ADE_FUNC(createParticle,
 	particle::create(&pi);
 
 	return ADE_RETURN_TRUE;
+}
+
+ADE_FUNC(screenToBlob, l_Graphics, nullptr, "Captures the current render target and encodes it into a blob-PNG", "string", "The png blob string")
+{
+	if (!Gr_inited)
+		return ade_set_error(L, "s", "");
+
+	return ade_set_args(L, "s", gr_blob_screen().c_str());
 }
 
 } // namespace api
