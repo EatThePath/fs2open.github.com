@@ -614,7 +614,7 @@ public:
 	int	departure_delay;		// time in seconds after sexp is true that we delay.
 
 	int	wingnum;								// wing number this ship is in.  -1 if in no wing, Wing array index otherwise
-	std::set<size_t> orders_accepted;					// set of orders this ship will accept from the player.
+	SCP_set<size_t> orders_accepted;				// set of orders this ship will accept from the player.
 
 	// Subsystem fields.  The subsys_list is a list of all subsystems (which might include multiple types
 	// of a particular subsystem, like engines).  The subsys_info struct is information for particular
@@ -1464,6 +1464,9 @@ private:
 extern flag_def_list_new<Ship::Info_Flags> Ship_flags[];
 extern const size_t Num_ship_flags;
 
+extern flag_def_list_new<Model::Subsystem_Flags> Subsystem_flags[];
+extern const size_t Num_subsystem_flags;
+
 extern int Num_wings;
 extern ship Ships[MAX_SHIPS];
 extern ship	*Player_ship;
@@ -1530,7 +1533,7 @@ typedef struct wing {
 
 	int	wave_delay_min;						// minimum number of seconds before new wave can arrive
 	int	wave_delay_max;						// maximum number of seconds before new wave can arrive
-	int	wave_delay_timestamp;				// timestamp used for delaying arrival of next wave
+	TIMESTAMP	wave_delay_timestamp;				// timestamp used for delaying arrival of next wave
 
 	flagset<Ship::Wing_Flags> flags;
 
@@ -1546,6 +1549,10 @@ typedef struct wing {
 
 	// if -1, retail formation, else a custom one defined in ships.tbl
 	int formation;
+	float formation_scale;
+
+	// reset to a completely blank wing
+	void clear();
 } wing;
 
 extern wing Wings[MAX_WINGS];
@@ -1556,7 +1563,6 @@ extern int TVT_wings[MAX_TVT_WINGS];
 
 extern char Starting_wing_names[MAX_STARTING_WINGS][NAME_LENGTH];
 extern char Squadron_wing_names[MAX_SQUADRON_WINGS][NAME_LENGTH];
-extern bool Squadron_wing_names_found[MAX_SQUADRON_WINGS];
 extern char TVT_wing_names[MAX_TVT_WINGS][NAME_LENGTH];
 
 extern int ai_paused;

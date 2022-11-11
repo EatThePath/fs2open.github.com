@@ -1905,7 +1905,7 @@ void game_init()
 
 	parse_rank_tbl();
 	parse_traitor_tbl();
-	parse_medal_tbl();
+	medals_init();
 
 	cutscene_init();
 	key_init();
@@ -2020,8 +2020,9 @@ void game_init()
 #ifdef WITH_FFMPEG
 		libs::ffmpeg::initialize();
 #endif
-
-		libs::discord::init();
+		if (Discord_presence) {
+			libs::discord::init();
+		}
 	}
 
 	mod_table_post_process();

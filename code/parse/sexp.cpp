@@ -714,6 +714,7 @@ SCP_vector<sexp_oper> Operators = {
 	{ "set-skybox-model",				OP_SET_SKYBOX_MODEL,					1,	8,			SEXP_ACTION_OPERATOR,	},	// taylor
 	{ "set-skybox-orientation",			OP_SET_SKYBOX_ORIENT,					3,	3,			SEXP_ACTION_OPERATOR,	},	// Goober5000
 	{ "set-ambient-light",				OP_SET_AMBIENT_LIGHT,					3,	3,			SEXP_ACTION_OPERATOR,	},	// Karajorma
+	{ "toggle-asteroid-field",			OP_TOGGLE_ASTEROID_FIELD,				1,	1,			SEXP_ACTION_OPERATOR,	},	// MjnMixael
 
 	//Jump Node Sub-Category
 	{ "set-jumpnode-name",				OP_JUMP_NODE_SET_JUMPNODE_NAME,			2,	2,			SEXP_ACTION_OPERATOR,	},	//CommanderDJ
@@ -1972,6 +1973,11 @@ int check_sexp_syntax(int node, int return_type, int recursive, int *bad_node, i
 
 	Assert(node >= 0 && node < Num_sexp_nodes);
 	Assert(Sexp_nodes[node].type != SEXP_NOT_USED);
+
+	op_node = node;		// save the node of the operator since we need to get to other args.
+	if (bad_node)
+		*bad_node = op_node;
+
 	if (Sexp_nodes[node].subtype == SEXP_ATOM_NUMBER && return_type == OPR_BOOL) {
 		// special case Mark seems to want supported
 		Assert(Sexp_nodes[node].first == -1);  // only lists should have a first pointer
@@ -1980,10 +1986,6 @@ int check_sexp_syntax(int node, int return_type, int recursive, int *bad_node, i
 
 		return 0;
 	}
-
-	op_node = node;		// save the node of the operator since we need to get to other args.
-	if (bad_node)
-		*bad_node = op_node;
 
 	if (Sexp_nodes[op_node].subtype != SEXP_ATOM_OPERATOR)
 		return SEXP_CHECK_OP_EXPECTED;  // not an operator, which it should always be
@@ -3485,12 +3487,12 @@ int check_sexp_syntax(int node, int return_type, int recursive, int *bad_node, i
 				if ( type2 != SEXP_ATOM_STRING)
 					return SEXP_CHECK_TYPE_MISMATCH;
 
-				for (i = 0; i < Num_medals; i++) {
+				for (i = 0; i < (int)Medals.size(); i++) {
 					if ( !stricmp(CTEXT(node), Medals[i].name) )
 						break;
 				}
 
-				if ( i == Num_medals )
+				if (i == (int)Medals.size())
 					return SEXP_CHECK_INVALID_MEDAL_NAME;
 				break;
 
@@ -9090,7 +9092,7 @@ int sexp_was_medal_granted(int n)
 
 	auto medal_name = CTEXT(n);
 
-	for (int i=0; i<Num_medals; ++i) {
+	for (int i = 0; i < (int)Medals.size(); ++i) {
 		if (!stricmp(medal_name, Medals[i].name)) {
 			if (Player->stats.m_medal_earned == i) {
 				return SEXP_TRUE;
@@ -14967,6 +14969,11 @@ void sexp_nebula_change_fog_color(int node)
 	The_mission.flags |= Mission::Mission_Flags::Neb2_fog_color_override;
 }
 
+void sexp_toggle_asteroid_field(int n)
+{
+	Asteroids_enabled = is_sexp_true(n);
+}
+
 /**
  * End the mission.
  *
@@ -15083,12 +15090,12 @@ void sexp_grant_medal(int n)
 		Warning(LOCATION, "Cannot grant more than one medal per mission!  New medal '%s' will replace old medal '%s'!", medal_name, Medals[Player->stats.m_medal_earned].name);
 	}
 
-	for (i = 0; i < Num_medals; i++ ) {
+	for (i = 0; i < (int)Medals.size(); i++) {
 		if ( !stricmp(medal_name, Medals[i].name) )
 			break;
 	}
 
-	if ( i < Num_medals ) {
+	if (i < (int)Medals.size()) {
 		Player->stats.m_medal_earned = i;
 
 		if ( Game_mode & GM_MULTIPLAYER ) {
@@ -19551,6 +19558,7 @@ void sexp_beam_fire(int node, bool at_coords)
 		fire_info.fire_method = BFM_TURRET_FORCE_FIRED;
 
 		beam_fire(&fire_info);
+		fire_info.turret->turret_next_fire_pos++;
 	} else {
 		// it would appear the turret doesn't have any beam weapons
 		Warning(LOCATION, "Couldn't fire turret on ship %s; subsystem %s has no beam weapons", CTEXT(node), CTEXT(CDR(node)));
@@ -26285,6 +26293,11 @@ int eval_sexp(int cur_node, int referenced_node)
 				sexp_val = SEXP_TRUE;
 				break;
 
+			case OP_TOGGLE_ASTEROID_FIELD:
+				sexp_toggle_asteroid_field(node);
+				sexp_val = SEXP_TRUE;
+				break;
+
 			case OP_END_MISSION:
 				sexp_end_mission(node);
 				sexp_val = SEXP_TRUE;
@@ -28497,6 +28510,7 @@ int query_operator_return_type(int op)
 		case OP_REMOVE_SUN_BITMAP:
 		case OP_NEBULA_CHANGE_STORM:
 		case OP_NEBULA_TOGGLE_POOF:
+		case OP_TOGGLE_ASTEROID_FIELD:
 		case OP_SET_PRIMARY_AMMO:
 		case OP_SET_SECONDARY_AMMO:
 		case OP_SET_PRIMARY_WEAPON:
@@ -31025,6 +31039,9 @@ int query_operator_argument_type(int op, int argnum)
 		case OP_NEBULA_CHANGE_FOG_COLOR:
 			return OPF_POSITIVE;
 
+		case OP_TOGGLE_ASTEROID_FIELD:
+			return OPF_BOOL;
+
 		case OP_SCRIPT_EVAL_BOOL:
 		case OP_SCRIPT_EVAL_NUM:
 		case OP_SCRIPT_EVAL_BLOCK:
@@ -33063,6 +33080,7 @@ int get_subcategory(int sexp_id)
 		case OP_NEBULA_CHANGE_PATTERN:
 		case OP_NEBULA_CHANGE_FOG_COLOR:
 		case OP_SET_AMBIENT_LIGHT:
+		case OP_TOGGLE_ASTEROID_FIELD:
 			return CHANGE_SUBCATEGORY_BACKGROUND_AND_NEBULA;
 
 		case OP_JUMP_NODE_SET_JUMPNODE_NAME: //CommanderDJ
@@ -37661,6 +37679,12 @@ SCP_vector<sexp_help_struct> Sexp_help = {
 		"Inverse Kinematics:\r\n"
 		"\tThree required numbers: x, y, z position target relative to base, in 1/100th meters\r\n"
 		"\tThree optional numbers: x, y, z rotation target relative to base, in degrees\r\n"
+	},
+
+	{ OP_TOGGLE_ASTEROID_FIELD, "toggle-asteroid-field\r\n" 
+		"\tTurns an existing asteroid field on/off. Will do nothing if no asteroid field is defined in the mission file!\r\n"
+		"\tTakes 1 argument...\r\n"
+		"\t1:\ttrue for asteroid field on, false for asteroid field off\r\n" 
 	}
 };
 // clang-format on
