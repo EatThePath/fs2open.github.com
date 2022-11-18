@@ -52,6 +52,7 @@ bool Flight_controls_follow_eyepoint_orientation;
 int FS2NetD_port;
 int Default_multi_object_update_level;
 float Briefing_window_FOV;
+int Briefing_window_resolution[2];
 bool Disable_hc_message_ani;
 SCP_vector<SCP_string> Custom_head_anis;
 bool Red_alert_applies_to_delayed_ships;
@@ -800,6 +801,22 @@ void parse_mod_table(const char *filename)
 			}
 		}
 
+		if (optional_string("$FRED Briefing window resolution:")) {
+			int res[2];
+			if (stuff_int_list(res, 2) == 2) {
+				mprintf(("Game Settings Table: Setting FRED briefing window resolution from (%ix%i) to (%ix%i)\n",
+					Briefing_window_resolution[0],
+					Briefing_window_resolution[1],
+					res[0],
+					res[1]));
+
+				Briefing_window_resolution[0] = res[0];
+				Briefing_window_resolution[1] = res[1];
+			} else {
+				Warning(LOCATION, "$FRED Briefing window resolution: must specify two arguments");
+			}
+		}
+
 		optional_string("#OTHER SETTINGS");
 
 		if (optional_string("$Fixed Turret Collisions:")) {
@@ -856,7 +873,6 @@ void parse_mod_table(const char *filename)
 			stuff_boolean(&Use_3d_overhead_ship);
 		}
 
-		Default_overhead_ship_style = OH_TOP_VIEW;
 		if (optional_string("$Default overhead ship style:")) {
 			char effect[NAME_LENGTH];
 			stuff_string(effect, F_NAME, NAME_LENGTH);
@@ -1115,6 +1131,7 @@ void mod_table_reset()
 	Use_host_orientation_for_set_camera_facing = false;
 	Default_ship_select_effect = 2;
 	Default_weapon_select_effect = 2;
+	Default_overhead_ship_style = OH_TOP_VIEW;
 	Default_fiction_viewer_ui = -1;
 	Enable_external_shaders = false;
 	Enable_external_default_scripts = false;
@@ -1126,6 +1143,8 @@ void mod_table_reset()
 	FS2NetD_port = 0;
 	Default_multi_object_update_level = OBJ_UPDATE_HIGH;
 	Briefing_window_FOV = 0.29375f;
+	Briefing_window_resolution[0] = 888;
+	Briefing_window_resolution[1] = 371;
 	Disable_hc_message_ani = false;
 	Red_alert_applies_to_delayed_ships = false;
 	Beams_use_damage_factors = false;

@@ -327,6 +327,7 @@ flag_def_list_new<Mission::Parse_Object_Flags> Parse_object_flags[] = {
     { "fail-sound-locked-secondary",		Mission::Parse_Object_Flags::SF_Fail_sound_locked_secondary, true, false },
     { "aspect-immune",						Mission::Parse_Object_Flags::SF_Aspect_immune, true, false },
 	{ "cannot-perform-scan",			Mission::Parse_Object_Flags::SF_Cannot_perform_scan,	true, false },
+	{ "no-targeting-limits",				Mission::Parse_Object_Flags::SF_No_targeting_limits, true, false},
 };
 
 const size_t Num_parse_object_flags = sizeof(Parse_object_flags) / sizeof(flag_def_list_new<Mission::Parse_Object_Flags>);
@@ -2074,6 +2075,11 @@ int parse_create_object_sub(p_object *p_objp, bool standalone_ship)
 
 		if (wingp->flags[Ship::Wing_Flags::Nav_carry])
 			shipp->flags.set(Ship::Ship_Flags::Navpoint_carry);
+
+		// if it's wing leader, take the opportunity to set the wing leader's info index in the wing struct
+		if (!Fred_running && p_objp->pos_in_wing == 0) {
+			wingp->special_ship_ship_info_index = p_objp->ship_class;
+		}
 	}
 
 	// if the wing index and wing pos are set for this parse object, set them for the ship.  This
@@ -2683,6 +2689,9 @@ void resolve_parse_flags(object *objp, flagset<Mission::Parse_Object_Flags> &par
 		shipp->flags.set(Ship::Ship_Flags::Aspect_immune);
 
 	if (parse_flags[Mission::Parse_Object_Flags::SF_Cannot_perform_scan])
+		shipp->flags.set(Ship::Ship_Flags::Cannot_perform_scan);
+
+	if (parse_flags[Mission::Parse_Object_Flags::SF_No_targeting_limits])
 		shipp->flags.set(Ship::Ship_Flags::Cannot_perform_scan);
 }
 
@@ -3785,6 +3794,10 @@ void swap_parse_object(p_object *p_obj, int new_ship_class)
 	// Class
 	// First things first. Change the class of the p_object
 	p_obj->ship_class = new_ship_class;
+
+	if (p_obj->wingnum > -1 && p_obj->pos_in_wing == 0) {
+		Wings[p_obj->wingnum].special_ship_ship_info_index = new_ship_class;
+	}
 
 	// Hitpoints
 	// We need to take into account that the ship might have been assigned special hitpoints so we can't 
