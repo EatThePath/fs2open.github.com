@@ -8013,7 +8013,7 @@ void ship_wing_cleanup( int shipnum, wing *wingp )
 		wingp->special_ship--;
 
 	if (wingp->current_count > 0) {
-		if (wingp->special_ship >= index) {
+		if (wingp->special_ship >= index - 1) {
 			wingp->special_ship_ship_info_index = Ships[wingp->ship_index[wingp->special_ship]].ship_info_index;
 		} else {
 			wingp->special_ship_ship_info_index = Ships[wingp->ship_index[0]].ship_info_index;
