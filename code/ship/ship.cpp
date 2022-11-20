@@ -8009,15 +8009,18 @@ void ship_wing_cleanup( int shipnum, wing *wingp )
 	wingp->ship_index[wingp->current_count] = -1;
 
 	// adjust the special ship if necessary
-	if (wingp->special_ship > 0 && wingp->special_ship >= index)
+	if (wingp->special_ship > 0 && wingp->special_ship >= index){
 		wingp->special_ship--;
 
-	if (wingp->current_count > 0) {
-		if (wingp->special_ship >= index - 1) {
+		// sorry to have make this a little convoluted, if I put this after this if statement, then I introduce edge case bugs.
+		// if there are ships in the wing, and the special ship changed, make sure the special_ship_ship_info_index is updated too
+		if (wingp->current_count > 0){
 			wingp->special_ship_ship_info_index = Ships[wingp->ship_index[wingp->special_ship]].ship_info_index;
-		} else {
-			wingp->special_ship_ship_info_index = Ships[wingp->ship_index[0]].ship_info_index;
 		}
+	
+	// if the special ship *variable* didn't change, but the wing leader did because index was 0, adjust special_ship_ship_info_index 
+	} else if (wingp->current_count > 0 && index == 0) {
+			wingp->special_ship_ship_info_index = Ships[wingp->ship_index[0]].ship_info_index;
 	}
 
 	// if the current count is 0, check to see if the wing departed or was destroyed.
@@ -10579,7 +10582,7 @@ void change_ship_type(int n, int ship_type, int by_sexp)
 	ph_inf = objp->phys_info;
 
 	// if this ship is the wing leader, update the ship info index that the wing keeps track of.
-	if (p_objp->wingnum > -1 && p_objp->pos_in_wing == 0) {
+	if (!Fred_running && p_objp->wingnum > -1 && p_objp->pos_in_wing == 0) {
 		Wings[p_objp->wingnum].special_ship_ship_info_index = ship_type;
 	}
 
