@@ -120,6 +120,8 @@ shadow_disable_overrides Shadow_disable_overrides {false, false, false, false};
 float Thruster_easing;
 bool Always_use_distant_firepoints;
 bool Discord_presence;
+bool Hotkey_always_hide_hidden_ships;
+bool Use_weapon_class_sounds_for_hits_to_player;
 
 static auto DiscordOption = options::OptionBuilder<bool>("Other.Discord", "Discord Presence", "Toggle Discord Rich Presence")
 							 .category("Other")
@@ -764,6 +766,10 @@ void parse_mod_table(const char *filename)
 			}
 		}
 
+		if (optional_string("$Use weapon class impact sounds for hits to player:")) {
+			stuff_boolean(&Use_weapon_class_sounds_for_hits_to_player);
+		}
+
 		optional_string("#FRED SETTINGS");
 
 		if (optional_string("$Disable Hard Coded Message Head Ani Files:")) {
@@ -1068,9 +1074,14 @@ void parse_mod_table(const char *filename)
 		if (optional_string("$Use distant firepoint for all turrets:")){
 			stuff_boolean(&Always_use_distant_firepoints);
 		}
-		if (optional_string("$Enable discord rich presence:")) {
+		if (optional_string("$Enable Discord rich presence:")) {
 			stuff_boolean(&Discord_presence);
 		}
+
+		if (optional_string("$Always hide hidden ships in hotkey list:")) {
+			stuff_boolean(&Hotkey_always_hide_hidden_ships);
+		}
+
 
 		required_string("#END");
 	}
@@ -1212,6 +1223,8 @@ void mod_table_reset()
 	Thruster_easing = 0;
 	Always_use_distant_firepoints = false;
 	Discord_presence = true;
+	Hotkey_always_hide_hidden_ships = false;
+	Use_weapon_class_sounds_for_hits_to_player = false;
 }
 
 void mod_table_set_version_flags()
