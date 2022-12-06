@@ -188,7 +188,7 @@ void opengl_post_pass_bloom()
 
 		GL_state.Texture.Enable(0, GL_TEXTURE_2D, Bloom_textures[0]);
 
-		GL_state.SetAlphaBlendMode(ALPHA_BLEND_ADDITIVE);
+		GL_state.SetAlphaBlendMode(ALPHA_BLEND_ALPHA_BLEND_ALPHA);
 
 		glViewport(0, 0, gr_screen.max_w, gr_screen.max_h);
 
