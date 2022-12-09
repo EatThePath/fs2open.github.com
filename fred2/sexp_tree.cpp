@@ -46,6 +46,7 @@
 #include "globalincs/alphacolors.h"
 #include "localization/localize.h"
 #include "AddModifyContainerDlg.h"
+#include "asteroid/asteroid.h"
 
 #define TREE_NODE_INCREMENT	100
 
@@ -3374,6 +3375,7 @@ int sexp_tree::query_default_argument_available(int op, int i)
 		case OPF_FUNCTIONAL_WHEN_EVAL_TYPE:
 		case OPF_ANIMATION_NAME:
 		case OPF_CONTAINER_VALUE:
+		case OPF_WING_FORMATION:
 			return 1;
 
 		case OPF_SHIP:
@@ -5432,6 +5434,14 @@ sexp_list_item *sexp_tree::get_listing_opf(int opf, int parent_node, int arg_ind
 			list = nullptr;
 			break;
 
+		case OPF_ASTEROID_DEBRIS:
+			list = get_listing_opf_asteroid_debris();
+			break;
+
+		case OPF_WING_FORMATION:
+			list = get_listing_opf_wing_formation();
+			break;
+
 		default:
 			Int3();  // unknown OPF code
 			list = NULL;
@@ -7105,6 +7115,22 @@ sexp_list_item *sexp_tree::get_listing_opf_nebula_patterns()
 	return head.next;
 }
 
+sexp_list_item* sexp_tree::get_listing_opf_asteroid_debris()
+{
+	sexp_list_item head;
+
+	head.add_data(SEXP_NONE_STRING);
+
+	for (int i = 0; i < (int)Asteroid_info.size(); i++) {
+		//first three asteroids are not debris-Mjn
+		if (i > NUM_DEBRIS_SIZES) {
+			head.add_data(Asteroid_info[i].name);
+		}
+	}
+
+	return head.next;
+}
+
 extern SCP_vector<game_snd>	Snds;
 
 sexp_list_item *sexp_tree::get_listing_opf_game_snds()
@@ -7231,6 +7257,17 @@ sexp_list_item *sexp_tree::get_listing_opf_sexp_containers(ContainerType con_typ
 			head.add_data(container.container_name.c_str(), (SEXPT_CONTAINER_NAME | SEXPT_STRING | SEXPT_VALID));
 		}
 	}
+
+	return head.next;
+}
+
+sexp_list_item *sexp_tree::get_listing_opf_wing_formation()	// NOLINT
+{
+	sexp_list_item head;
+
+	head.add_data("Default");
+	for (const auto &formation : Wing_formations)
+		head.add_data(formation.name);
 
 	return head.next;
 }

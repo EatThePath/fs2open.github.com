@@ -805,6 +805,12 @@ int parse_weapon(int subtype, bool replace, const char *filename)
 
 	required_string("$Name:");
 	stuff_string(fname, F_NAME, NAME_LENGTH);
+
+	// Remove @ symbol -- these used to denote weapons that would only be parsed in demo builds
+	if (fname[0] == '@') {
+		backspace(fname);
+	}
+
 	diag_printf("Weapon name -- %s\n", fname);
 
 	if(optional_string("+nocreate")) {
@@ -829,13 +835,6 @@ int parse_weapon(int subtype, bool replace, const char *filename)
 			Removed_weapons.push_back(fname);
 			remove_weapon = true;
 		}
-	}
-
-	//Remove @ symbol
-	//these used to denote weapons that would
-	//only be parsed in demo builds
-	if ( fname[0] == '@' ) {
-		backspace(fname);
 	}
 
 	//Check if weapon exists already
@@ -1348,6 +1347,23 @@ int parse_weapon(int subtype, bool replace, const char *filename)
 	if(optional_string("$Cargo Size:"))
 	{
 		stuff_float(&wip->cargo_size);
+	}
+
+	if (optional_string("$Autoaim FOV:")) {
+		float fovt;
+		stuff_float(&fovt);
+
+		//Must be between 0 and 360 - Mjn
+		if (fovt < 0.0f) {
+			fovt = 0.0f;
+			error_display(0, "Weapon %s autoaim fov was less than 0, setting to %f\n", wip->name, fovt);
+		}
+		if (fovt >= 180.0f) {
+			fovt = 180.0f;
+			error_display(0, "Weapon %s autoaim fov was greater than 180, setting to %f\n", wip->name, fovt);
+		}
+
+		wip->autoaim_fov = fovt * PI / 180.0f;
 	}
 
 	bool is_homing=false;
@@ -8892,6 +8908,7 @@ void weapon_info::reset()
 	this->turn_time = 1.0f;
 	this->turn_accel_time = 0.f;
 	this->cargo_size = 1.0f;
+	this->autoaim_fov = 0.0f;
 	this->rearm_rate = 1.0f;
 	this->reloaded_per_batch = -1;
 	this->weapon_range = WEAPON_DEFAULT_TABLED_MAX_RANGE;
