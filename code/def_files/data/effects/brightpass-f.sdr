@@ -16,7 +16,8 @@ void main() {
 	//ColorOut *= (1.0 + (ColorOut / (fWhiteCutoff * fWhiteCutoff)));
 	//ColorOut -= 6.0;
 	//ColorOut /= (10.0 + ColorOut);
-	fragOut0 = vec4(max(vec3(0.0, 0.0, 0.0), ColorOut.rgb - vec3(1.0, 1.0, 1.0)), 1.0);
+	fragOut0 = vec4(ColorOut.rgb,1.0);
+//	fragOut0 = vec4(max(vec3(0.0, 0.0, 0.0), ColorOut.rgb - vec3(1.0, 1.0, 1.0)), 1.0);
 	//float luminance = luminance(ColorOut.rgb);
 	//gl_FragColor.rgb = luminance > threshold ? ColorOut.rgb : vec3(0.0);
 }

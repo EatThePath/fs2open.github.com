@@ -11,14 +11,16 @@ layout (std140) uniform genericData {
 };
 
 void main() {
-	vec4 color_out = vec4(0.0, 0.0, 0.0, 1.0);
 	float factor = 0.0;
+	float blend = bloom_intensity;
+	clamp(blend, 0.0, 1.0);
+	vec4 color_out = vec4(0.0, 0.0, 0.0, blend);
 	for (int mipmap = 0; mipmap < levels; ++mipmap) {
 		float scale = 1.0/exp2(float(mipmap));
 		factor += scale;
-		color_out.rgb += textureLod(bloomed, fragTexCoord.xy, float(mipmap)).rgb * scale;
+		color_out.rgb += textureLod(bloomed, fragTexCoord.xy, float(mipmap)).rgb * 1;
 	}
 	color_out.rgb /= factor;
-	color_out.rgb *= bloom_intensity;
+	//color_out.rgb *= bloom_intensity;
 	fragOut0 = color_out;
 }

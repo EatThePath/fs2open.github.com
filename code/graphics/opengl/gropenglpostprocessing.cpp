@@ -179,16 +179,17 @@ void opengl_post_pass_bloom()
 		opengl_shader_set_current(gr_opengl_maybe_create_shader(SDR_TYPE_POST_PROCESS_BLOOM_COMP, 0));
 
 		Current_shader->program->Uniforms.setTextureUniform("tex", 0);
-
+		float bi = gr_bloom_intensity() / 200.0f;
+		bi *= bi;
 		opengl_set_generic_uniform_data<graphics::generic_data::bloom_composition_data>(
-			[](graphics::generic_data::bloom_composition_data* data) {
+			[bi](graphics::generic_data::bloom_composition_data* data) {
 				data->levels          = MAX_MIP_BLUR_LEVELS;
-				data->bloom_intensity = gr_bloom_intensity() / 100.0f;
+				data->bloom_intensity = bi;
 			});
 
 		GL_state.Texture.Enable(0, GL_TEXTURE_2D, Bloom_textures[0]);
 
-		GL_state.SetAlphaBlendMode(ALPHA_BLEND_ADDITIVE);
+		GL_state.SetAlphaBlendMode(ALPHA_BLEND_ALPHA_BLEND_ALPHA);
 
 		glViewport(0, 0, gr_screen.max_w, gr_screen.max_h);
 
