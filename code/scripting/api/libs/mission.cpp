@@ -65,6 +65,7 @@
 #include "scripting/lua/LuaConvert.h"
 #include "scripting/lua/LuaFunction.h"
 #include "scripting/lua/LuaTable.h"
+#include "scripting/global_hooks.h"
 #include "scripting/scripting.h"
 #include "ship/ship.h"
 #include "ship/shipfx.h"
@@ -271,26 +272,27 @@ ADE_INDEXER(l_Mission_Events, "number/string IndexOrName", "Indexes events list"
 		return ade_set_error(L, "o", l_Event.Set(-1));
 
 	int i;
-	for(i = 0; i < Num_mission_events; i++)
+	for(i = 0; i < (int)Mission_events.size(); i++)
 	{
-		if(!stricmp(Mission_events[i].name, s))
+		if(!stricmp(Mission_events[i].name.c_str(), s))
 			return ade_set_args(L, "o", l_Event.Set(i));
 	}
 
 	//Now try as a number
 	i = atoi(s);
-	if(i < 1 || i > Num_mission_events)
-		return ade_set_error(L, "o", l_Event.Set(-1));
-
 	//Lua-->FS2
 	i--;
+
+	if(i < 0 || i >= (int)Mission_events.size())
+		return ade_set_error(L, "o", l_Event.Set(-1));
+
 
 	return ade_set_args(L, "o", l_Event.Set(i));
 }
 
 ADE_FUNC(__len, l_Mission_Events, NULL, "Number of events in mission", "number", "Number of events in mission")
 {
-	return ade_set_args(L, "i", Num_mission_events);
+	return ade_set_args(L, "i", (int)Mission_events.size());
 }
 
 //****SUBLIBRARY: Mission/SEXPVariables
@@ -1046,10 +1048,11 @@ ADE_FUNC(createShip,
 
 		mission_log_add_entry(LOG_SHIP_ARRIVED, shipp->ship_name, nullptr, -1, show_in_log ? 0 : MLF_HIDDEN);
 
-		if (Script_system.IsActiveAction(CHA_ONSHIPARRIVE)) {
-			Script_system.SetHookObjects(2, "Ship", &Objects[obj_idx], "Parent", NULL);
-			Script_system.RunCondition(CHA_ONSHIPARRIVE, &Objects[obj_idx]);
-			Script_system.RemHookVars({"Ship", "Parent"});
+		if (scripting::hooks::OnShipArrive->isActive()) {
+			scripting::hooks::OnShipArrive->run(scripting::hooks::ShipArriveConditions{ shipp, ARRIVE_AT_LOCATION, nullptr },
+				scripting::hook_param_list(
+					scripting::hook_param("Ship", 'o', &Objects[obj_idx])
+				));
 		}
 
 		return ade_set_args(L, "o", l_Ship.Set(object_h(&Objects[obj_idx])));

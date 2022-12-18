@@ -640,7 +640,6 @@ void sexp_tree::right_clicked(int mode)
 
 	m_mode = mode;
 	add_instance = replace_instance = -1;
-	Assert(Operators.size() <= MAX_OPERATORS);
 	Assert((int)op_menu.size() < MAX_OP_MENUS);
 	Assert((int)op_submenu.size() < MAX_SUBMENUS);
 
@@ -964,7 +963,7 @@ void sexp_tree::right_clicked(int mode)
 		{
 			// add only if it is not in a subcategory
 			subcategory_id = get_subcategory(Operators[i].value);
-			if (subcategory_id == -1)
+			if (subcategory_id == OP_SUBCATEGORY_NONE)
 			{
 				// put it in the appropriate menu
 				for (j=0; j<(int)op_menu.size(); j++)
@@ -1574,11 +1573,7 @@ void sexp_tree::right_clicked(int mode)
 		for (j=0; j<(int)Operators.size(); j++) {
 			z = 0;
 			if (m_mode == MODE_CAMPAIGN) {
-				if (Operators[j].value & OP_NONCAMPAIGN_FLAG)
-					z = 1;
-
-			} else {
-				if (Operators[j].value & OP_CAMPAIGN_ONLY_FLAG)
+				if (!usable_in_campaign(Operators[j].value))
 					z = 1;
 			}
 
@@ -3442,7 +3437,7 @@ int sexp_tree::query_default_argument_available(int op, int i)
 				return 1;
 
 			// need to be sure that previous-goal functions are available.  (i.e. we are providing a default argument for them)
-			else if ((value == OP_PREVIOUS_GOAL_TRUE) || (value == OP_PREVIOUS_GOAL_FALSE) || (value == OP_PREVIOUS_GOAL_INCOMPLETE) || Num_goals)
+			else if ((value == OP_PREVIOUS_GOAL_TRUE) || (value == OP_PREVIOUS_GOAL_FALSE) || (value == OP_PREVIOUS_GOAL_INCOMPLETE) || !Mission_goals.empty())
 				return 1;
 
 			return 0;
@@ -3456,7 +3451,7 @@ int sexp_tree::query_default_argument_available(int op, int i)
 				return 1;
 
 			// need to be sure that previous-event functions are available.  (i.e. we are providing a default argument for them)
-			else if ((value == OP_PREVIOUS_EVENT_TRUE) || (value == OP_PREVIOUS_EVENT_FALSE) || (value == OP_PREVIOUS_EVENT_INCOMPLETE) || Num_mission_events)
+			else if ((value == OP_PREVIOUS_EVENT_TRUE) || (value == OP_PREVIOUS_EVENT_FALSE) || (value == OP_PREVIOUS_EVENT_INCOMPLETE) || !Mission_events.empty())
 				return 1;
 
 			return 0;
@@ -3503,8 +3498,22 @@ int sexp_tree::query_default_argument_available(int op, int i)
 			}
 			return 0;
 
+		case OPF_ASTEROID_DEBRIS:
+			if ((Asteroid_info.size() - NUM_ASTEROID_POFS) > 0) {
+				return 1;
+			}
+			return 0;
+
 		default:
-			Int3();
+			if (!Dynamic_enums.empty()) {
+				if ((type - First_available_opf_id) < (int)Dynamic_enums.size()) {
+					return 1;
+				} else {
+					UNREACHABLE("Unhandled SEXP argument type!");
+				}
+			} else {
+				UNREACHABLE("Unhandled SEXP argument type!");
+			}
 
 	}
 
@@ -5443,8 +5452,8 @@ sexp_list_item *sexp_tree::get_listing_opf(int opf, int parent_node, int arg_ind
 			break;
 
 		default:
-			Int3();  // unknown OPF code
-			list = NULL;
+			//We're at the end of the list so check for any dynamic enums
+			list = check_for_dynamic_sexp_enum(opf);
 			break;
 	}
 
@@ -6592,7 +6601,7 @@ sexp_list_item *sexp_tree::get_listing_opf_mission_name()
 
 sexp_list_item *sexp_tree::get_listing_opf_goal_name(int parent_node)
 {
-	int i, m;
+	int m;
 	sexp_list_item head;
 
 	if (m_mode == MODE_CAMPAIGN) {
@@ -6607,16 +6616,21 @@ sexp_list_item *sexp_tree::get_listing_opf_goal_name(int parent_node)
 				break;
 
 		if (m < Campaign.num_missions) {
-			if (Campaign.missions[m].num_goals < 0)  // haven't loaded goal names yet.
+			if (Campaign.missions[m].flags & CMISSION_FLAG_FRED_LOAD_PENDING)  // haven't loaded goal names yet.
+			{
 				read_mission_goal_list(m);
+				Campaign.missions[m].flags &= ~CMISSION_FLAG_FRED_LOAD_PENDING;
+			}
 
-			for (i=0; i<Campaign.missions[m].num_goals; i++)
-				head.add_data(Campaign.missions[m].goals[i].name);
+			for (const auto &stored_goal: Campaign.missions[m].goals)
+				head.add_data(stored_goal.name);
 		}
-
 	} else {
-		for (i=0; i<Num_goals; i++)
-			head.add_data(Mission_goals[i].name);
+		for (const auto &goal: Mission_goals) {
+			auto temp_name = goal.name;
+			SCP_truncate(temp_name, NAME_LENGTH);
+			head.add_data(temp_name.c_str());
+		}
 	}
 
 	return head.next;
@@ -6673,7 +6687,7 @@ sexp_list_item *sexp_tree::get_listing_opf_keypress()
 
 sexp_list_item *sexp_tree::get_listing_opf_event_name(int parent_node)
 {
-	int i, m;
+	int m;
 	sexp_list_item head;
 
 
@@ -6689,16 +6703,21 @@ sexp_list_item *sexp_tree::get_listing_opf_event_name(int parent_node)
 				break;
 
 		if (m < Campaign.num_missions) {
-			if (Campaign.missions[m].num_events < 0)  // haven't loaded goal names yet.
+			if (Campaign.missions[m].flags & CMISSION_FLAG_FRED_LOAD_PENDING)  // haven't loaded goal names yet.
+			{
 				read_mission_goal_list(m);
+				Campaign.missions[m].flags &= ~CMISSION_FLAG_FRED_LOAD_PENDING;
+			}
 
-			for (i=0; i<Campaign.missions[m].num_events; i++)
-				head.add_data(Campaign.missions[m].events[i].name);
+			for (const auto &stored_event: Campaign.missions[m].events)
+				head.add_data(stored_event.name);
 		}
-
 	} else {
-		for (i=0; i<Num_mission_events; i++)
-			head.add_data(Mission_events[i].name);
+		for (const auto &event: Mission_events) {
+			auto temp_name = event.name;
+			SCP_truncate(temp_name, NAME_LENGTH);
+			head.add_data(temp_name.c_str());
+		}
 	}
 
 	return head.next;
@@ -7123,7 +7142,7 @@ sexp_list_item* sexp_tree::get_listing_opf_asteroid_debris()
 
 	for (int i = 0; i < (int)Asteroid_info.size(); i++) {
 		//first three asteroids are not debris-Mjn
-		if (i > NUM_DEBRIS_SIZES) {
+		if (i > NUM_ASTEROID_SIZES) {
 			head.add_data(Asteroid_info[i].name);
 		}
 	}
@@ -7341,6 +7360,25 @@ sexp_list_item *sexp_tree::get_container_multidim_modifiers(int con_data_node) c
 	head.add_list(list);
 
 	return head.next;
+}
+
+sexp_list_item* sexp_tree::check_for_dynamic_sexp_enum(int opf)
+{
+	sexp_list_item head;
+
+	int item = opf - First_available_opf_id;
+
+	if (item < (int)Dynamic_enums.size()) {
+
+		for (const SCP_string& enum_item : Dynamic_enums[item].list) {
+			head.add_data(enum_item.c_str());
+		}
+		return head.next;
+	} else {
+		// else if opf is invalid do this
+		UNREACHABLE("Unhandled SEXP argument type!"); // unknown OPF code
+		return nullptr;
+	}
 }
 
 // given a node's parent, check if node is eligible for being used with the special argument

@@ -99,7 +99,7 @@ void LabManager::onFrame(float frametime) {
 
 	Renderer->onFrame(frametime);
 
-	labUi.createUi();
+	labUi.create_ui();
 
 	int key = game_check_key();
 
@@ -190,6 +190,7 @@ void LabManager::onFrame(float frametime) {
 
 		case KEY_ESC:
 			notify_close();
+			break;
 
 		default:
 			// check for game-specific controls
@@ -259,7 +260,8 @@ void LabManager::onFrame(float frametime) {
 		vm_rotate_matrix_by_angles(&CurrentOrientation, &rot_angles);
 	}
 	
-	//ImGui::ShowDemoWindow();
+	if (Cmdline_show_imgui_debug)
+		ImGui::ShowDemoWindow();
 	ImGui::Render();
 	ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
 

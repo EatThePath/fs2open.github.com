@@ -153,8 +153,10 @@ SCP_vector<SCP_string> SexpTreeEditorInterface::getMessages() {
 SCP_vector<SCP_string> SexpTreeEditorInterface::getMissionGoals(const SCP_string&  /*reference_name*/) {
 	SCP_vector<SCP_string> list;
 
-	for (auto i = 0; i < Num_goals; i++) {
-		list.emplace_back(Mission_goals[i].name);
+	for (const auto &goal: Mission_goals) {
+		auto temp_name = goal.name;
+		SCP_truncate(temp_name, NAME_LENGTH);
+		list.emplace_back(temp_name);
 	}
 
 	return list;
@@ -162,8 +164,10 @@ SCP_vector<SCP_string> SexpTreeEditorInterface::getMissionGoals(const SCP_string
 SCP_vector<SCP_string> SexpTreeEditorInterface::getMissionEvents(const SCP_string&  /*reference_name*/) {
 	SCP_vector<SCP_string> list;
 
-	for (auto i = 0; i < Num_mission_events; i++) {
-		list.emplace_back(Mission_events[i].name);
+	for (const auto &event: Mission_events) {
+		auto temp_name = event.name;
+		SCP_truncate(temp_name, NAME_LENGTH);
+		list.emplace_back(temp_name);
 	}
 
 	return list;
@@ -176,11 +180,11 @@ bool SexpTreeEditorInterface::hasDefaultMissionName() {
 }
 bool SexpTreeEditorInterface::hasDefaultGoal(int operator_value) {
 	return (operator_value == OP_PREVIOUS_GOAL_TRUE) || (operator_value == OP_PREVIOUS_GOAL_FALSE)
-		|| (operator_value == OP_PREVIOUS_GOAL_INCOMPLETE) || Num_goals;
+		|| (operator_value == OP_PREVIOUS_GOAL_INCOMPLETE) || !Mission_goals.empty();
 }
 bool SexpTreeEditorInterface::hasDefaultEvent(int operator_value) {
 	return (operator_value == OP_PREVIOUS_EVENT_TRUE) || (operator_value == OP_PREVIOUS_EVENT_FALSE)
-		|| (operator_value == OP_PREVIOUS_EVENT_INCOMPLETE) || Num_mission_events;
+		|| (operator_value == OP_PREVIOUS_EVENT_INCOMPLETE) || !Mission_events.empty();
 
 }
 const flagset<TreeFlags>& SexpTreeEditorInterface::getFlags() const {
@@ -1622,7 +1626,7 @@ int sexp_tree::query_default_argument_available(int op, int i) {
 
 			// need to be sure that previous-goal functions are available.  (i.e. we are providing a default argument for them)
 		} else if ((value == OP_PREVIOUS_GOAL_TRUE) || (value == OP_PREVIOUS_GOAL_FALSE)
-			|| (value == OP_PREVIOUS_GOAL_INCOMPLETE) || Num_goals) {
+			|| (value == OP_PREVIOUS_GOAL_INCOMPLETE) || !Mission_goals.empty()) {
 				return 1;
 		}
 
@@ -1643,7 +1647,7 @@ int sexp_tree::query_default_argument_available(int op, int i) {
 
 			// need to be sure that previous-event functions are available.  (i.e. we are providing a default argument for them)
 		} else if ((value == OP_PREVIOUS_EVENT_TRUE) || (value == OP_PREVIOUS_EVENT_FALSE)
-			|| (value == OP_PREVIOUS_EVENT_INCOMPLETE) || Num_mission_events) {
+			|| (value == OP_PREVIOUS_EVENT_INCOMPLETE) || !Mission_events.empty()) {
 			return 1;
 		}
 
@@ -1683,7 +1687,15 @@ int sexp_tree::query_default_argument_available(int op, int i) {
 		return 0;
 
 	default:
-		Int3();
+		if (!Dynamic_enums.empty()) {
+			if ((type - First_available_opf_id) < (int)Dynamic_enums.size()) {
+				return 1;
+			} else {
+				UNREACHABLE("Unhandled SEXP argument type!");
+			}
+		} else {
+			UNREACHABLE("Unhandled SEXP argument type!");
+		}
 
 	}
 
@@ -3317,8 +3329,8 @@ sexp_list_item* sexp_tree::get_listing_opf(int opf, int parent_node, int arg_ind
 		break;
 
 	default:
-		Int3();  // unknown OPF code
-		list = NULL;
+		// We're at the end of the list so check for any dynamic enums
+		list = check_for_dynamic_sexp_enum(opf);
 		break;
 	}
 
@@ -4384,16 +4396,18 @@ sexp_list_item* sexp_tree::get_listing_opf_goal_name(int parent_node) {
 				break;
 
 		if (m < Campaign.num_missions) {
-			if (Campaign.missions[m].num_goals < 0)  // haven't loaded goal names yet.
+			if (Campaign.missions[m].flags & CMISSION_FLAG_FRED_LOAD_PENDING)  // haven't loaded goal names yet.
+			{
 				read_mission_goal_list(m);
+				Campaign.missions[m].flags &= ~CMISSION_FLAG_FRED_LOAD_PENDING;
+			}
 
-			for (i = 0; i < Campaign.missions[m].num_goals; i++)
+			for (i = 0; i < (int)Campaign.missions[m].goals.size(); i++)
 				head.add_data(Campaign.missions[m].goals[i].name);
 		}
-
 	} else {
-		for (i = 0; i < Num_goals; i++)
-			head.add_data(Mission_goals[i].name);
+		for (i = 0; i < (int)Mission_goals.size(); i++)
+			head.add_data(Mission_goals[i].name.c_str());
 	}
 	 */
 
@@ -4473,15 +4487,18 @@ sexp_list_item* sexp_tree::get_listing_opf_event_name(int parent_node) {
 				break;
 
 		if (m < Campaign.num_missions) {
-			if (Campaign.missions[m].num_events < 0)  // haven't loaded goal names yet.
+			if (Campaign.missions[m].flags & CMISSION_FLAG_FRED_LOAD_PENDING)  // haven't loaded goal names yet.
+			{
 				read_mission_goal_list(m);
+				Campaign.missions[m].flags &= ~CMISSION_FLAG_FRED_LOAD_PENDING;
+			}
 
-			for (i = 0; i < Campaign.missions[m].num_events; i++)
+			for (i = 0; i < (int)Campaign.missions[m].events.size(); i++)
 				head.add_data(Campaign.missions[m].events[i].name);
 		}
 	} else {
-		for (i = 0; i < Num_mission_events; i++)
-			head.add_data(Mission_events[i].name);
+		for (i = 0; i < (int)Mission_events.size(); i++)
+			head.add_data(Mission_events[i].name.c_str());
 	}
 	 */
 
@@ -5119,6 +5136,25 @@ sexp_list_item *sexp_tree::get_container_multidim_modifiers(int con_data_node) c
 	return head.next;
 }
 
+sexp_list_item* sexp_tree::check_for_dynamic_sexp_enum(int opf)
+{
+	sexp_list_item head;
+
+	int item = opf - First_available_opf_id;
+
+	if (item < (int)Dynamic_enums.size()) {
+
+		for (const SCP_string& enum_item : Dynamic_enums[item].list) {
+			head.add_data(enum_item.c_str());
+		}
+		return head.next;
+	} else {
+		// else if opf is invalid do this
+		UNREACHABLE("Unhandled SEXP argument type!"); // unknown OPF code
+		return nullptr;
+	}
+}
+
 // given a node's parent, check if node is eligible for being used with the special argument
 bool sexp_tree::is_node_eligible_for_special_argument(int parent_node) const
 {
@@ -5322,7 +5358,6 @@ std::unique_ptr<QMenu> sexp_tree::buildContextMenu(QTreeWidgetItem* h) {
 	sexp_list_item* list;
 
 	add_instance = replace_instance = -1;
-	Assert(Operators.size() <= MAX_OPERATORS);
 	Assert((int) op_menu.size() < MAX_OP_MENUS);
 	Assert((int) op_submenu.size() < MAX_SUBMENUS);
 
@@ -5634,7 +5669,7 @@ std::unique_ptr<QMenu> sexp_tree::buildContextMenu(QTreeWidgetItem* h) {
 	for (i = 0; i < (int) Operators.size(); i++) {
 		// add only if it is not in a subcategory
 		subcategory_id = get_subcategory(Operators[i].value);
-		if (subcategory_id == -1) {
+		if (subcategory_id == OP_SUBCATEGORY_NONE) {
 			// put it in the appropriate menu
 			for (j = 0; j < (int) op_menu.size(); j++) {
 				if (op_menu[j].id == get_category(Operators[i].value)) {
@@ -6285,14 +6320,8 @@ std::unique_ptr<QMenu> sexp_tree::buildContextMenu(QTreeWidgetItem* h) {
 	for (j = 0; j < (int) Operators.size(); j++) {
 		z = 0;
 		if (_interface->requireCampaignOperators()) {
-			if (Operators[j].value & OP_NONCAMPAIGN_FLAG) {
+			if (!usable_in_campaign(Operators[j].value))
 				z = 1;
-			}
-
-		} else {
-			if (Operators[j].value & OP_CAMPAIGN_ONLY_FLAG) {
-				z = 1;
-			}
 		}
 
 		if (z) {

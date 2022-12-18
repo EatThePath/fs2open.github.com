@@ -3982,57 +3982,55 @@ void weapon_load_bitmaps(int weapon_index)
 	wip = &Weapon_info[weapon_index];
 
 	if ( (wip->render_type == WRT_LASER) && (wip->laser_bitmap.first_frame < 0) ) {
-		wip->laser_bitmap.first_frame = bm_load(wip->laser_bitmap.filename);
-
-		if (wip->laser_bitmap.first_frame >= 0) {
-			wip->laser_bitmap.num_frames = 1;
-			wip->laser_bitmap.total_time = 1;
-		}
-		// fall back to an animated type
-		else if ( generic_anim_load(&wip->laser_bitmap) ) {
-			mprintf(("Could not find a usable bitmap for '%s'!\n", wip->name));
-			Warning(LOCATION, "Could not find a usable bitmap (%s) for weapon '%s'!\n", wip->laser_bitmap.filename, wip->name);
+		if (generic_anim_load(&wip->laser_bitmap)) {
+			// fall back to non-animated type
+			wip->laser_bitmap.first_frame = bm_load(wip->laser_bitmap.filename);
+			if (wip->laser_bitmap.first_frame >= 0) {
+				wip->laser_bitmap.num_frames = 1;
+				wip->laser_bitmap.total_time = 1.0f;
+			}
+			else {
+				mprintf(("Could not find a usable bitmap for '%s'!\n", wip->name));
+				Warning(LOCATION, "Could not find a usable bitmap (%s) for weapon '%s'!\n", wip->laser_bitmap.filename, wip->name);
+			}
 		}
 
 		// now see if we also have a glow
-		if ( strlen(wip->laser_glow_bitmap.filename) ) {
+		if (strlen(wip->laser_glow_bitmap.filename) && generic_anim_load(&wip->laser_glow_bitmap)) {
+			// fall back to non-animated type
 			wip->laser_glow_bitmap.first_frame = bm_load(wip->laser_glow_bitmap.filename);
-
 			if (wip->laser_glow_bitmap.first_frame >= 0) {
 				wip->laser_glow_bitmap.num_frames = 1;
-				wip->laser_glow_bitmap.total_time = 1;
+				wip->laser_glow_bitmap.total_time = 1.0f;
 			}
-			// fall back to an animated type
-			else if ( generic_anim_load(&wip->laser_glow_bitmap) ) {
-				mprintf(("Could not find a usable glow bitmap for '%s'!\n", wip->name));
+			else {
+				mprintf(("Could not find a usable glow bitmap for weapon '%s'!\n", wip->name));
 				Warning(LOCATION, "Could not find a usable glow bitmap (%s) for weapon '%s'!\n", wip->laser_glow_bitmap.filename, wip->name);
 			}
 		}
 
-		if (strlen(wip->laser_headon_bitmap.filename)) {
+		if (strlen(wip->laser_headon_bitmap.filename) && generic_anim_load(&wip->laser_headon_bitmap)) {
+			// fall back to non-animated type
 			wip->laser_headon_bitmap.first_frame = bm_load(wip->laser_headon_bitmap.filename);
-
 			if (wip->laser_headon_bitmap.first_frame >= 0) {
 				wip->laser_headon_bitmap.num_frames = 1;
-				wip->laser_headon_bitmap.total_time = 1;
+				wip->laser_headon_bitmap.total_time = 1.0f;
 			}
-			// fall back to an animated type
-			else if (generic_anim_load(&wip->laser_headon_bitmap)) {
-				mprintf(("Could not find a usable head-on bitmap for '%s'!\n", wip->name));
+			else {
+				mprintf(("Could not find a usable head-on bitmap for weapon '%s'!\n", wip->name));
 				Warning(LOCATION, "Could not find a usable head-on bitmap (%s) for weapon '%s'!\n", wip->laser_headon_bitmap.filename, wip->name);
 			}
 		}
 
-		if (strlen(wip->laser_glow_headon_bitmap.filename)) {
+		if (strlen(wip->laser_glow_headon_bitmap.filename) && generic_anim_load(&wip->laser_glow_headon_bitmap)) {
+			// fall back to non-animated type
 			wip->laser_glow_headon_bitmap.first_frame = bm_load(wip->laser_glow_headon_bitmap.filename);
-
 			if (wip->laser_glow_headon_bitmap.first_frame >= 0) {
 				wip->laser_glow_headon_bitmap.num_frames = 1;
-				wip->laser_glow_headon_bitmap.total_time = 1;
+				wip->laser_glow_headon_bitmap.total_time = 1.0f;
 			}
-			// fall back to an animated type
-			else if (generic_anim_load(&wip->laser_glow_headon_bitmap)) {
-				mprintf(("Could not find a usable glow head-on bitmap for '%s'!\n", wip->name));
+			else {
+				mprintf(("Could not find a usable glow head-on bitmap for weapon '%s'!\n", wip->name));
 				Warning(LOCATION, "Could not find a usable glow head-on bitmap (%s) for weapon '%s'!\n", wip->laser_glow_headon_bitmap.filename, wip->name);
 			}
 		}
@@ -4492,16 +4490,18 @@ void weapon_delete(object *obj)
 	weapon *wp;
 	int num;
 
-	if (Script_system.IsActiveAction(CHA_ONWEAPONDELETE)) {
-		Script_system.SetHookObjects(2, "Weapon", obj, "Self", obj);
-		Script_system.RunCondition(CHA_ONWEAPONDELETE, obj);
-		Script_system.RemHookVars({"Weapon", "Self"});
-	}
-
 	num = obj->instance;
 
 	Assert( Weapons[num].objnum == OBJ_INDEX(obj));
 	wp = &Weapons[num];
+
+	if (scripting::hooks::OnWeaponDelete->isActive()) {
+		scripting::hooks::OnWeaponDelete->run(scripting::hooks::WeaponDeathConditions{ wp },
+			scripting::hook_param_list(
+				scripting::hook_param("Weapon", 'o', obj),
+				scripting::hook_param("Self", 'o', obj)
+			));
+	}
 
 	Assert(wp->weapon_info_index >= 0);
 	wp->weapon_info_index = -1;
@@ -6553,10 +6553,11 @@ int weapon_create( vec3d * pos, matrix * porient, int weapon_type, int parent_ob
 		wip->animations.getAll(model_get_instance(wp->model_instance_num), animation::ModelAnimationTriggerType::OnSpawn).start(animation::ModelAnimationDirection::FWD);
 	}
 
-	if (Script_system.IsActiveAction(CHA_ONWEAPONCREATED)) {
-		Script_system.SetHookObject("Weapon", &Objects[objnum]);
-		Script_system.RunCondition(CHA_ONWEAPONCREATED, &Objects[objnum]);
-		Script_system.RemHookVar("Weapon");
+	if (scripting::hooks::OnWeaponCreated->isActive()) {
+		scripting::hooks::OnWeaponCreated->run(scripting::hooks::WeaponCreatedConditions{ wp, &Objects[parent_objnum] },
+			scripting::hook_param_list(
+				scripting::hook_param("Weapon", 'o', &Objects[objnum])
+			));
 	}
 
 	return objnum;
@@ -7213,10 +7214,10 @@ void weapon_hit( object * weapon_obj, object * other_obj, vec3d * hitpos, int qu
 
 	if (scripting::hooks::OnMissileDeathStarted->isActive() && wip->subtype == WP_MISSILE) {
 		// analagous to On Ship Death Started
-		scripting::hooks::OnMissileDeathStarted->run(scripting::hook_param_list(
+		scripting::hooks::OnMissileDeathStarted->run(scripting::hooks::WeaponDeathConditions{ wp },
+			scripting::hook_param_list(
 			scripting::hook_param("Weapon", 'o', weapon_obj),
-			scripting::hook_param("Object", 'o', other_obj)),
-			weapon_obj);
+			scripting::hook_param("Object", 'o', other_obj)));
 	}
 
 	// check if the weapon actually hit the intended target
@@ -7400,10 +7401,10 @@ void weapon_hit( object * weapon_obj, object * other_obj, vec3d * hitpos, int qu
 	}
 
 	if (scripting::hooks::OnMissileDeath->isActive() && wip->subtype == WP_MISSILE) {
-		scripting::hooks::OnMissileDeath->run(scripting::hook_param_list(
+		scripting::hooks::OnMissileDeath->run(scripting::hooks::WeaponDeathConditions{ wp },
+			scripting::hook_param_list(
 			scripting::hook_param("Weapon", 'o', weapon_obj),
-			scripting::hook_param("Object", 'o', other_obj)),
-			weapon_obj);
+			scripting::hook_param("Object", 'o', other_obj)));
 	}
 
     weapon_obj->flags.set(Object::Object_Flags::Should_be_dead);
