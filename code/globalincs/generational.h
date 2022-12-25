@@ -12,58 +12,151 @@ struct gIndex{
 
 
 template  <typename T>
+
 struct gEntry {
 	size_t generation;
 	optional<T> value;
 };
 
 template  <typename T>
+//forward declaration of gref, fun.
+class gRef;
+template  <typename T>
 
+//rules:
+//Caps can only ever be set at the current size or smaller
+//shrinking the vector would lead to forgetting the generation counts and then potential slot reuse if allowed to expand later.
 class gVector {
 	vector<gEntry<T>> storage;
 	vector<size_t> known_empty;
+	bool capped = false;
+	size_t cap = 0;
+
+	//Internal function to expand the storage list with a new object
+	//for use when there are no empty slots and the storage is not capped
+	gIndex add_new(){
+		gEntry<T> n;
+		n.generation = 0;
+		//Assuming trivial constructor behavior here...
+		storage.push_back(n);
+		gIndex i;
+		i.index = storage.size()-1;
+		i.generation = 0;
+		return i;
+	};
+
+	//Internal function to use an existing free slot for a new object
+	gIndex use_free(){
+		auto i = known_empty.back();
+		Assertion(storage[i].value == nullopt ,"Attempted to use_free on a slot that was not free");
+		//values are created as nullopt when expanding a list
+		//and resest to nullopt here so we need to construct a new object to go in there.
+		storage[i].value = T();
+		storage[i].generation++;
+		gIndex r;
+		r.index = i;
+		r.generation = storage[i].generation;
+		known_empty.pop_back();
+		return r;
+	}
+	//internal function to find or create a new slot
+	//if size is capped and there's no slot, return nullopt.
+	optional<gIndex> get_new(){
+		if (known_empty.empty()) {
+			if (capped && storage.size()>=cap) {
+				return tl::nullopt;
+			}
+			return add_new();
+		}
+		return use_free();
+	};
+	//Internal function to 
+	void fill_empty_list(){
+		known_empty.clear();
+		for (size_t i=storage.size()-1; i>=0;i--){
+			known_empty.push_back(i);
+		}
+	}
+
 	public:
 	gVector<T>() = default;
-	gVector<T>(size_t capacity){
-		//fill the slots backwards, so popping from known empty later gets entry 0.
-		for (size_t i=capacity-1; i>=capacity;i--){
+	gVector<T>(size_t cap){
+	};
+
+	void reset(){
+		capped = false;
+		cap = 0;
+		for(gEntry<T> entry: storage){
+			if (entry.value != tl::nullopt)
+				entry.reset;
+		}
+		fill_empty_list();
+	}
+
+	void reset(size_t cap_in){
+		capped = true;
+		cap=MAX(cap_in,storage.size());//shrinking a container is illegal.
+
+		for(gEntry<T> entry: storage){
+			if (entry.value != tl::nullopt)
+				entry.reset;
+		}
+		for (size_t i=storage.size(); i<cap;i++){
 			gEntry<T> e;
 			e.generation = 0;
 			e.value = tl::nullopt;
 			storage.push_back(e);
-			known_empty.push_back(i);
 		}
+		fill_empty_list();
+	}
+
+	//Index into the storage...
+	optional<T> operator[](gIndex i) {
+		if (i.index >= storage.size()) {
+			return tl::nullopt;
+		}
+		if (storage[i.index].generation!= i.generation){
+			return tl::nullopt;
+		}
+		return storage[i.index].value;
 	};
-	optional<T> operator[](gIndex i);
-	optional<T*> get_pointer(gIndex i);
-	gIndex add(T input);
-	void remove(gIndex i);
-};
 
+	optional<T*> get_pointer(gIndex i){
+		if (i.index >= storage.size()) {
+			return tl::nullopt;
+		}
+		if (storage[i.index].generation!= i.generation){
+			return tl::nullopt;
+		}
+		return *(storage[i.index].value);
+	};
 
-template  <typename T>
-optional<T> gVector<T>::operator[](gIndex i){
-	if (i.index >= storage.size()) {
-		return tl::nullopt;
-	}
-	if (storage[i.index].generation!= i.generation){
-		return tl::nullopt;
-	}
-	return storage[i.index].value;
-};
-template  <typename T>
+	//gets a gRef object
+	//this sidesteps much of the boilerplate stuff, a ref can just be asked for a pointer
+	optional<gRef<T>> getNewRef(){
+		T n;
+		auto i = add(n);
+		gRef<T> r = gRef<T>(i,this);
+		return i;
 
-optional<T*> gVector<T>::get_pointer(gIndex i){
-	if (i.index >= storage.size()) {
-		return tl::nullopt;
-	}
-	if (storage[i.index].generation!= i.generation){
-		return tl::nullopt;
-	}
-	return *(storage[i.index].value);
-}
-template  <typename T>
-gIndex gVector<T>::add(T input){
+	};
+	optional<gRef<T>> getRef(gIndex i){
+		if (i.index >= storage.size()) {
+			return tl::nullopt;
+		}
+		if (storage[i.index].generation!= i.generation){
+			return tl::nullopt;
+		}
+		gRef<T> r = gRef<T>(i,this);
+
+		return r;
+	};
+
+	//Store a value in the vector
+	//TODO: Handle capped stuff
+	//This is kind of in appropriate for the actual usage this is primarily intended to replace
+	//to the point where if we want this functionality it might need to be a seperate data structure for sake of strictness
+	gIndex add(T input){
 	if (known_empty.empty()) {
 		gEntry<T> n;
 		n.generation = 0;
@@ -83,18 +176,51 @@ gIndex gVector<T>::add(T input){
 		r.generation = storage[i].generation;
 		known_empty.pop_back();
 		return r;
-	}
-}
+		}
+	};
 
+	void remove(gIndex i){
+		if (i.index >= storage.size()) {
+			return;
+		}
+		if (storage[i.index].generation != i.generation ) {
+			return;
+		}
+		storage[i.index].value.reset();
+		known_empty.push_back(i.index);
+	};
+
+
+
+
+	//iterator shit.
+	struct iter{
+		using iterator_category = std::input_iterator_tag;
+		using index = gIndex;
+
+		iter(index pos) : inner_position(pos){};
+	private:
+		index inner_position;
+	};
+	iter begin(){
+		//if (known_empty_) {
+		//statements
+		//}
+	};
+	iter end;
+};
 
 template  <typename T>
-void gVector<T>::remove(gIndex i){
-	if (i.index >= storage.size()) {
-		return;
-	}
-	if (storage[i.index].generation != i.generation ) {
-		return;
-	}
-	storage[i.index].value.reset();
-	known_empty.push_back(i.index);
-}
+class gRef{
+   gVector<T> *vec;
+   gIndex ind;
+   public:
+   gRef(gVector<T> *v,gIndex i){
+	vec = v;
+	ind = i;
+
+   };
+   optional<T*> getPointer(){
+	 return  vec->get_pointer(ind);
+   };
+};
