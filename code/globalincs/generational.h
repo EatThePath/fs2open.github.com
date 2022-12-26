@@ -1,5 +1,6 @@
 #pragma once
 
+#include "deflate.h"
 #include <tl/optional.hpp>
 #include <vcruntime.h>
 
@@ -198,18 +199,64 @@ class gVector {
 	//iterator shit.
 	struct iter{
 		using iterator_category = std::input_iterator_tag;
-		using index = gIndex;
+		using index = size_t;
 
-		iter(index pos) : inner_position(pos){};
+		iter(gVector<T> *vec_ptr, vector<gEntry<T>> *storage_ptr){
+			storage = storage_ptr;
+			vec = vec_ptr;
+		};
+		iter(gVector<T> *vec_ptr, vector<gEntry<T>> *storage_ptr, size_t start_pos){
+			storage = storage_ptr;
+			vec = vec_ptr;
+			inner_position = start_pos;
+			if(storage->at(inner_position).value == nullptr){
+				(*this)++;
+			}
+		};
+		bool operator==(const iter& rhs){
+			return inner_position == rhs->inner_position;
+		};
+		bool operator<(const iter& rhs){
+			return inner_position < rhs->inner_position;
+		};
+		iter& operator++(){
+			inner_position++;
+			//we want to skip empty slots
+			while(storage->at(inner_position).value == tl::nullopt 
+				  && inner_position < storage->size()){
+				inner_position++;
+			}
+			full_position.index=inner_position;
+			if(inner_position < storage->size()
+			   && storage->at(inner_position).value != tl::nullopt){
+				full_position.generation = storage->at(inner_position).generation;
+			}
+			return *this;
+		};
+		iter& operator++(int i){
+			return this++;
+		}
+		T* operator*(){
+			vec->get_pointer(full_position);
+		};
+		gRef<T> operator&(){
+			vec->getRef(inner_position);
+		};
 	private:
 		index inner_position;
+		gIndex full_position;
+		vector<gEntry<T>> *storage;
+		gVector<T> *vec;
 	};
 	iter begin(){
+		return iter(this,&storage,0);
 		//if (known_empty_) {
 		//statements
 		//}
 	};
-	iter end;
+	iter end(){
+		return iter(this,&storage,storage.size());
+	}
 };
 
 template  <typename T>
@@ -217,13 +264,14 @@ class gRef{
    gVector<T> *vec;
    gIndex ind;
    public:
-   gRef()=default;
+   gRef(){ vec = nullptr; ind = gIndex();};
    gRef(gVector<T> *v,gIndex i){
 	vec = v;
 	ind = i;
 
    };
    T* get_pointer(){
+	 if(vec==nullptr){return nullptr;}
 	 auto r = vec->get_pointer(ind);
 	 if(r == tl::nullopt)
 	 {
