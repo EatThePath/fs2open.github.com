@@ -12,6 +12,7 @@
 #ifndef __FS2_NEBULA_LIGHTNING_HEADER_FILE
 #define __FS2_NEBULA_LIGHTNING_HEADER_FILE
 
+#include "globalincs/generational.h"
 #include "globalincs/globals.h"
 #include "globalincs/pstypes.h"
 
@@ -30,10 +31,13 @@ typedef struct l_node {
 	l_node	*links[3];			// 3 links for lightning children
 	
 	l_node	*next, *prev;		// for used and free-lists only
+	gRef<l_node>  glinks[3];
+	gRef<l_node>  gnext, gprev;
 } l_node;
 
 // lightning bolts
 typedef struct l_bolt {
+	gRef<l_node>  ghead;
 	l_node	*head;				// head of the lightning bolt
 	int		bolt_life;			// remaining life timestamp
 	ubyte	used;				// used or not

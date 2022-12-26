@@ -24,6 +24,7 @@
 #include "parse/parselo.h"
 #include "render/3d.h"
 #include "weapon/emp.h"
+#include "globalincs/generational.h"
 
 // ------------------------------------------------------------------------------------------------------
 // NEBULA LIGHTNING DEFINES/VARS
@@ -36,6 +37,8 @@ l_node Nebl_nodes[MAX_LIGHTNING_NODES];
 l_node Nebl_free_list;
 l_node Nebl_used_list;
 
+gVector<l_node> gNodes = gVector<l_node>(MAX_LIGHTNING_NODES);
+
 // nodes in a lightning bolt
 #define LINK_LEFT	0
 #define LINK_RIGHT	1
@@ -44,6 +47,7 @@ l_node Nebl_used_list;
 // Lightning bolts
 int Num_lbolts = 0;
 l_bolt Nebl_bolts[MAX_LIGHTNING_BOLTS];
+gVector<l_bolt> gBolts = gVector<l_bolt>(MAX_LIGHTNING_BOLTS);
 
 // Lightning bolt types
 SCP_vector<bolt_type> Bolt_types;
@@ -453,7 +457,8 @@ void nebl_level_init()
 		Nebl_bolts[idx].bolt_life = -1;
 		Nebl_bolts[idx].used = 0;
 	}	
-	
+	gBolts.reset();
+	gNodes.reset();
 	// initialize node list
 	Num_lnodes = 0;
 	list_init( &Nebl_free_list );
