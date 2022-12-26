@@ -189,7 +189,9 @@ class gVector {
 		storage[i.index].value.reset();
 		known_empty.push_back(i.index);
 	};
-
+	bool check(gIndex i){
+		return (this[i]!=tl::nullopt);
+	}
 
 
 
@@ -215,12 +217,25 @@ class gRef{
    gVector<T> *vec;
    gIndex ind;
    public:
+   gRef()=default;
    gRef(gVector<T> *v,gIndex i){
 	vec = v;
 	ind = i;
 
    };
-   optional<T*> getPointer(){
-	 return  vec->get_pointer(ind);
+   T* get_pointer(){
+	 auto r = vec->get_pointer(ind);
+	 if(r == tl::nullopt)
+	 {
+		return nullptr;
+	 }
+	 assert(r!= nullptr);
+	 return r;
    };
+   bool check(){
+	 return vec->check(ind);
+   }
+   void destroy(){
+	vec->remove(ind);
+   }
 };
