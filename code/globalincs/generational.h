@@ -129,16 +129,18 @@ class gVector {
 		if (storage[i.index].generation!= i.generation){
 			return tl::nullopt;
 		}
-		return *(storage[i.index].value);
+		optional<T> s = storage[i.index].value;
+		T* p = s.operator->();
+		return p;
 	};
 
 	//gets a gRef object
 	//this sidesteps much of the boilerplate stuff, a ref can just be asked for a pointer
 	optional<gRef<T>> getNewRef(){
-		T n;
+		T n = T();
 		auto i = add(n);
-		gRef<T> r = gRef<T>(i,this);
-		return i;
+		gRef<T> r = gRef<T>(this,i);
+		return r;
 
 	};
 	optional<gRef<T>> getRef(gIndex i){
@@ -278,7 +280,8 @@ class gRef{
 		return nullptr;
 	 }
 	 assert(r!= nullptr);
-	 return r;
+	 T *v = r.value();
+	 return v;
    };
    bool check(){
 	 return vec->check(ind);
