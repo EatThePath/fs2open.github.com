@@ -12,9 +12,10 @@
 #ifndef __FS2_NEBULA_LIGHTNING_HEADER_FILE
 #define __FS2_NEBULA_LIGHTNING_HEADER_FILE
 
-#include "globalincs/generational.h"
 #include "globalincs/globals.h"
 #include "globalincs/pstypes.h"
+#include "globalincs/generational.h"
+#include "math/vecmat.h"
 
 // ------------------------------------------------------------------------------------------------------
 // NEBULA LIGHTNING DEFINES/VARS
@@ -28,17 +29,23 @@
 // lightning nodes
 typedef struct l_node {
 	vec3d	pos;				// world position
-	l_node	*links[3];			// 3 links for lightning children
-	
-	l_node	*next, *prev;		// for used and free-lists only
-	gRef<l_node>  glinks[3];
-	gRef<l_node>  gnext, gprev;
+	//l_node	*links[3];			// 3 links for lightning children
+	gRef<l_node> glinks[3];
+	//l_node() =default;
+//	l_node	*next, *prev;		// for used and free-lists only
+	~l_node(){
+		for(auto & glink : glinks){
+			if(glink.check()){
+				glink.destroy();
+			}
+		}
+	};
 } l_node;
 
 // lightning bolts
 typedef struct l_bolt {
-	gRef<l_node>  ghead;
-	l_node	*head;				// head of the lightning bolt
+	//l_node	*head;				// head of the lightning bolt
+	gRef<l_node> ghead;
 	int		bolt_life;			// remaining life timestamp
 	ubyte	used;				// used or not
 	ubyte	first_frame;		// if he hasn't been rendered at least once	
@@ -49,6 +56,12 @@ typedef struct l_bolt {
 	int		delay;				// delay stamp
 	int		strikes_left;		// #of strikes left
 	float	width;
+	//l_bolt() = default;
+	~l_bolt(){
+		if(ghead.check()){
+			ghead.destroy();
+		}
+	};
 } l_bolt;
 
 // one cross-section of a lightning bolt

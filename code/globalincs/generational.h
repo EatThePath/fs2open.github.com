@@ -214,10 +214,10 @@ class gVector {
 			}
 		};
 		bool operator==(const iter& rhs){
-			return inner_position == rhs->inner_position;
+			return inner_position == rhs.inner_position;
 		};
 		bool operator<(const iter& rhs){
-			return inner_position < rhs->inner_position;
+			return inner_position < rhs.inner_position;
 		};
 		iter& operator++(){
 			inner_position++;

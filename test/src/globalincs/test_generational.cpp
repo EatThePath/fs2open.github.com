@@ -2,7 +2,16 @@
 
 #include "globalincs/generational.h"
 #include "tl/optional.hpp"
+struct testobj{
+	int id;
+};
+TEST(GenerationalIndex, get){
+	gVector<testobj> store;
 
+	A = store.getNewRef();
+
+}
+/*
 TEST(GenerationalIndex, access) {
 	{
 		gVector<float> data;
@@ -37,4 +46,5 @@ TEST(GenerationalIndex, indexes) {
 		ASSERT_EQ(3, fifth.index);
 		ASSERT_EQ(0, fifth.generation);
 	}
+	*/
 }
