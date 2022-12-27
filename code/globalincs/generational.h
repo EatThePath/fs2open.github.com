@@ -1,8 +1,6 @@
 #pragma once
 
-#include "deflate.h"
 #include <tl/optional.hpp>
-#include <vcruntime.h>
 
 using namespace std;
 using  tl::optional;
@@ -49,7 +47,7 @@ class gVector {
 	//Internal function to use an existing free slot for a new object
 	gIndex use_free(){
 		auto i = known_empty.back();
-		Assertion(storage[i].value == nullopt ,"Attempted to use_free on a slot that was not free");
+		Assertion(storage[i].value == tl::nullopt ,"Attempted to use_free on a slot that was not free");
 		//values are created as nullopt when expanding a list
 		//and resest to nullopt here so we need to construct a new object to go in there.
 		storage[i].value = T();
@@ -89,7 +87,7 @@ class gVector {
 		cap = 0;
 		for(gEntry<T> entry: storage){
 			if (entry.value != tl::nullopt)
-				entry.reset;
+				entry.reset();
 		}
 		fill_empty_list();
 	}
@@ -100,7 +98,7 @@ class gVector {
 
 		for(gEntry<T> entry: storage){
 			if (entry.value != tl::nullopt)
-				entry.reset;
+				entry.reset();
 		}
 		for (size_t i=storage.size(); i<cap;i++){
 			gEntry<T> e;
@@ -112,14 +110,15 @@ class gVector {
 	}
 
 	//Index into the storage...
-	optional<T> operator[](gIndex i) {
+	optional<T&> operator[](gIndex i) {
 		if (i.index >= storage.size()) {
 			return tl::nullopt;
 		}
 		if (storage[i.index].generation!= i.generation){
 			return tl::nullopt;
 		}
-		return storage[i.index].value;
+		if(storage[i.index].value==tl::nullopt) return tl::nullopt;
+		return *(storage[i.index].value);
 	};
 
 	optional<T*> get_pointer(gIndex i){
@@ -143,6 +142,14 @@ class gVector {
 		return r;
 
 	};
+
+	
+gIndex getNew(){
+	T n = T();
+	auto i = add(n);
+	return i;
+};
+
 	optional<gRef<T>> getRef(gIndex i){
 		if (i.index >= storage.size()) {
 			return tl::nullopt;
@@ -279,7 +286,7 @@ class gRef{
 	 {
 		return nullptr;
 	 }
-	 assert(r!= nullptr);
+	 assert(r.value() != nullptr);
 	 T *v = r.value();
 	 return v;
    };
@@ -287,6 +294,6 @@ class gRef{
 	 return vec->check(ind);
    }
    void destroy(){
-	vec->remove(ind);
+	 vec->remove(ind);
    }
 };
