@@ -14,7 +14,7 @@ template  <typename T>
 
 struct gEntry {
 	size_t generation;
-	optional<T> value;
+	optional<T> stored;
 };
 
 template  <typename T>
@@ -86,7 +86,7 @@ class gVector {
 		capped = false;
 		cap = 0;
 		for(gEntry<T> entry: storage){
-			if (entry.value != tl::nullopt)
+			if (entry.stored != tl::nullopt)
 				entry.reset();
 		}
 		fill_empty_list();
@@ -97,13 +97,13 @@ class gVector {
 		cap=MAX(cap_in,storage.size());//shrinking a container is illegal.
 
 		for(gEntry<T> entry: storage){
-			if (entry.value != tl::nullopt)
+			if (entry.stored != tl::nullopt)
 				entry.reset();
 		}
 		for (size_t i=storage.size(); i<cap;i++){
 			gEntry<T> e;
 			e.generation = 0;
-			e.value = tl::nullopt;
+			e.stored = tl::nullopt;
 			storage.push_back(e);
 		}
 		fill_empty_list();
@@ -117,8 +117,9 @@ class gVector {
 		if (storage[i.index].generation!= i.generation){
 			return tl::nullopt;
 		}
-		if(storage[i.index].value==tl::nullopt) return tl::nullopt;
-		return *(storage[i.index].value);
+		if(storage[i.index].stored==tl::nullopt) return tl::nullopt;
+		T* v = (storage[i.index].stored).operator->();
+		return optional<T&>(*v);
 	};
 
 	optional<T*> get_pointer(gIndex i){
@@ -170,7 +171,7 @@ gIndex getNew(){
 	if (known_empty.empty()) {
 		gEntry<T> n;
 		n.generation = 0;
-		n.value = input;
+		n.stored = input;
 		storage.push_back(n);
 		gIndex i;
 		i.index = storage.size()-1;
@@ -179,7 +180,7 @@ gIndex getNew(){
 		}
 	else {
 		auto i = known_empty.back();
-		storage[i].value = input;
+		storage[i].stored = input;
 		storage[i].generation++;
 		gIndex r;
 		r.index = i;
@@ -196,7 +197,7 @@ gIndex getNew(){
 		if (storage[i.index].generation != i.generation ) {
 			return;
 		}
-		storage[i.index].value.reset();
+		storage[i.index].stored.reset();
 		known_empty.push_back(i.index);
 	};
 	bool check(gIndex i){
