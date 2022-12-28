@@ -110,16 +110,18 @@ class gVector {
 	}
 
 	//Index into the storage...
-	optional<T&> operator[](gIndex i) {
+	T& operator[](gIndex i) {
+		T* v = nullptr;
 		if (i.index >= storage.size()) {
-			return tl::nullopt;
+			return *v;
 		}
 		if (storage[i.index].generation!= i.generation){
-			return tl::nullopt;
+			return *v;
 		}
-		if(storage[i.index].stored==tl::nullopt) return tl::nullopt;
-		T* v = (storage[i.index].stored).operator->();
-		return optional<T&>(*v);
+		if(storage[i.index].stored==tl::nullopt) 
+			return *v;
+		v = (storage[i.index].stored).operator->();
+		return *v;
 	};
 
 	optional<T*> get_pointer(gIndex i){
