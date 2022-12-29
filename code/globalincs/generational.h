@@ -44,7 +44,7 @@ struct gIndex{
 template  <typename T>
 
 struct gEntry {
-	size_t generation;
+	int generation;
 	optional<T> stored;
 
 };
@@ -198,7 +198,7 @@ class gVector {
 		n.generation = 0;
 		n.stored = input;
 		storage.push_back(n);
-		gIndex i(storage.size()-1,0);;
+		gIndex i(((int) storage.size())-1,(int) 0);;
 		return i;
 		}
 	else {
