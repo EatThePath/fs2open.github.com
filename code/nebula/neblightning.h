@@ -14,6 +14,7 @@
 
 #include "globalincs/globals.h"
 #include "globalincs/pstypes.h"
+#include "globalincs/generational.h"
 
 // ------------------------------------------------------------------------------------------------------
 // NEBULA LIGHTNING DEFINES/VARS
@@ -27,14 +28,13 @@
 // lightning nodes
 typedef struct l_node {
 	vec3d	pos;				// world position
-	l_node	*links[3];			// 3 links for lightning children
-	
-	l_node	*next, *prev;		// for used and free-lists only
+	gIndex	links[3];			// 3 links for lightning children
+
 } l_node;
 
 // lightning bolts
 typedef struct l_bolt {
-	l_node	*head;				// head of the lightning bolt
+	gIndex	head;				// head of the lightning bolt
 	int		bolt_life;			// remaining life timestamp
 	ubyte	used;				// used or not
 	ubyte	first_frame;		// if he hasn't been rendered at least once	
@@ -138,16 +138,16 @@ void nebl_process();
 void nebl_bolt(int type, vec3d *start, vec3d *strike);
 
 // "new" a lightning node
-l_node *nebl_new();
+gIndex nebl_new();
 
 // "delete" a lightning node
-void nebl_delete(l_node *lp);
+void nebl_delete(gIndex lp);
 
 // free up a the nodes of the passed in bolt
-void nebl_release(l_node *bolt_head);
+void nebl_release(gIndex bolt_head);
 
 // generate a lightning bolt, returns l_left (the "head") and l_right (the "tail")
-int nebl_gen(vec3d *left, vec3d *right, float depth, float max_depth, int child, l_node **l_left, l_node **l_right);
+int nebl_gen(vec3d *left, vec3d *right, float depth, float max_depth, int child, gIndex *l_left, gIndex *l_right);
 
 // output top and bottom vectors
 // fvec == forward vector (eye viewpoint basically. in world coords)
@@ -159,10 +159,10 @@ void nebl_calc_facing_pts_smart(vec3d *top, vec3d *bot, vec3d *fvec, vec3d *pos,
 void nebl_render_section(bolt_type *bi, l_section *a, l_section *b);
 
 // generate a section
-void nebl_generate_section(bolt_type *bi, float width, l_node *a, l_node *b, l_section *c, l_section *cap, int pinch_a, int pinch_b);
+void nebl_generate_section(bolt_type *bi, float width, gIndex a, gIndex b, l_section *c, l_section *cap, int pinch_a, int pinch_b);
 
 // render the bolt
-void nebl_render(bolt_type *bi, l_node *whee, float width, l_section *prev = NULL);
+void nebl_render(bolt_type *bi,  l_node * whee, float width, l_section *prev = NULL);
 
 // given a valid, complete bolt, jitter him based upon his noise
 void nebl_jitter(l_bolt *b);

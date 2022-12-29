@@ -13,6 +13,7 @@
 #include "debugconsole/console.h"
 #include "freespace.h"
 #include "gamesnd/gamesnd.h"
+#include "globalincs/generational.h"
 #include "globalincs/linklist.h"
 #include "io/timer.h"
 #include "mission/missionparse.h"
@@ -24,17 +25,13 @@
 #include "parse/parselo.h"
 #include "render/3d.h"
 #include "weapon/emp.h"
+#include "tl/optional.hpp"
 
 // ------------------------------------------------------------------------------------------------------
 // NEBULA LIGHTNING DEFINES/VARS
 //
 
-// Lightning nodes
-int Num_lnodes = 0;
-l_node Nebl_nodes[MAX_LIGHTNING_NODES];
-
-l_node Nebl_free_list;
-l_node Nebl_used_list;
+gVector<l_node> Nebl_nodes;
 
 // nodes in a lightning bolt
 #define LINK_LEFT	0
@@ -43,7 +40,8 @@ l_node Nebl_used_list;
 
 // Lightning bolts
 int Num_lbolts = 0;
-l_bolt Nebl_bolts[MAX_LIGHTNING_BOLTS];
+
+gVector <l_bolt> Nebl_bolts;
 
 // Lightning bolt types
 SCP_vector<bolt_type> Bolt_types;
@@ -445,24 +443,8 @@ void nebl_init()
 // initialize lightning before entering a level
 void nebl_level_init()
 {
-	size_t idx;	
 
-	// zero all lightning bolts
-	for(idx=0; idx<MAX_LIGHTNING_BOLTS; idx++){
-		Nebl_bolts[idx].head = NULL;
-		Nebl_bolts[idx].bolt_life = -1;
-		Nebl_bolts[idx].used = 0;
-	}	
-	
-	// initialize node list
-	Num_lnodes = 0;
-	list_init( &Nebl_free_list );
-	list_init( &Nebl_used_list );
-
-	// Link all object slots into the free list
-	for (idx=0; idx<MAX_LIGHTNING_NODES; idx++)	{
-		list_append(&Nebl_free_list, &Nebl_nodes[idx] );
-	}
+	Nebl_bolts.reset();
 
 	// zero the random timestamp
 	Nebl_stamp = -1;		
@@ -504,121 +486,114 @@ void nebl_render_all()
 	}
 
 	// traverse the list
-	for(size_t idx=0; idx<MAX_LIGHTNING_BOLTS; idx++){
-		b = &Nebl_bolts[idx];		
+	for(auto i = Nebl_bolts.begin(); i<Nebl_bolts.end(); i++){
+		*b = &i;
 
-		// if this is being used
-		if(b->used){
-			Assert(b->head != NULL);
+		if(!Nebl_bolts.check(b->head)){
+			Nebl_bolts.remove(i.position());
+			continue;
+		}
+		if( b->type >= Bolt_types.size() ){
+			Nebl_bolts.remove(i.position());
+			continue;
+		}
+		bi = &Bolt_types[b->type];
 
-			// bogus bolt
-			if(b->head == NULL){
-				b->used = 0;
+		// if this guy is still on a delay
+		if(b->delay != -1){
+			if(timestamp_elapsed(b->delay)){
+				b->delay = -1;
+			} else {
 				continue;
-			}
-			if( b->type >= Bolt_types.size() ){
-				b->used = 0;
-				continue;
-			}
-			bi = &Bolt_types[b->type];
-
-			// if this guy is still on a delay
-			if(b->delay != -1){
-				if(timestamp_elapsed(b->delay)){
-					b->delay = -1;
-				} else {
-					continue;
-				}
-			}
-
-			// if the timestamp on this guy has expired
-			if((b->bolt_life < 0) || timestamp_elapsed(b->bolt_life)){
-				// if this is a multiple strike bolt, jitter it and reset
-				if(b->strikes_left-1 > 0){
-					b->bolt_life = timestamp(bi->lifetime / bi->num_strikes);
-					b->first_frame = 1;
-					b->strikes_left--;
-					nebl_jitter(b);
-
-					// by continuing here we skip rendering for one frame, which makes it look more like real lightning
-					continue;
-				}
-				// otherwise he's completely done, so release him
-				else {
-					// maybe free up node data
-					if(b->head != NULL){
-						nebl_release(b->head);
-						b->head = NULL;
-
-						Num_lbolts--;
-
-						nprintf(("lightning", "Released bolt. %d used nodes!\n", Num_lnodes));
-					}
-
-					b->used = 0;
-				}
-			}
-
-			// pick some cool alpha values
-			Nebl_alpha = frand();
-			Nebl_glow_alpha = frand();
-
-			// otherwise render him
-			Nebl_flash_count = 0;
-			Nebl_flash_x = 0.0f;
-			Nebl_flash_y = 0.0f;
-			Nebl_bang = 10000000.0f;
-			nebl_render(bi, b->head, b->width);
-
-			// if this is the first frame he has been rendered, determine if we need to make a flash and sound effect
-			if(b->first_frame){
-				float flash = 0.0f;				
-
-				b->first_frame = 0;
-
-				// if we rendered any points
-				if(Nebl_flash_count){
-					Nebl_flash_x /= (float)Nebl_flash_count;
-					Nebl_flash_y /= (float)Nebl_flash_count;
-
-					// quick distance from the center of the screen			
-					float x = Nebl_flash_x - (gr_screen.max_w / 2.0f);
-					float y = Nebl_flash_y - (gr_screen.max_h / 2.0f);
-					float dist = fl_sqrt((x * x) + (y * y));		
-					if(dist / (gr_screen.max_w / 2.0f) < 1.0f){
-						flash = 1.0f - (dist / (gr_screen.max_w / 2.0f));										
-
-						// scale the flash by bolt type
-						flash *= bi->b_bright;
-
-						game_flash(flash, flash, flash);										
-					}					
-
-					// do some special stuff on the very first strike of the bolt
-					if(b->strikes_left == bi->num_strikes){					
-						// play a sound
-						float bang;
-						if(Nebl_bang < 40.0f){
-							bang = 1.0f;
-						} else if(Nebl_bang > 400.0f){
-							bang = 0.0f;
-						} else {
-							bang = 1.0f - (Nebl_bang / 400.0f);
-						}
-						if(frand_range(0.0f, 1.0f) < 0.5f){
-							snd_play(gamesnd_get_game_sound(GameSounds::LIGHTNING_2), 0.0f, bang, SND_PRIORITY_DOUBLE_INSTANCE);
-						} else {
-							snd_play(gamesnd_get_game_sound(GameSounds::LIGHTNING_1), 0.0f, bang, SND_PRIORITY_DOUBLE_INSTANCE);
-						}
-
-						// apply em pulse
-						if(bi->emp_intensity > 0.0f){
-							emp_apply(&b->midpoint, 0.0f, vm_vec_dist(&b->start, &b->strike), bi->emp_intensity, bi->emp_time);
-						}
-					}
-				}				
 			}
 		}
+
+		// if the timestamp on this guy has expired
+		if((b->bolt_life < 0) || timestamp_elapsed(b->bolt_life)){
+			// if this is a multiple strike bolt, jitter it and reset
+			if(b->strikes_left-1 > 0){
+				b->bolt_life = timestamp(bi->lifetime / bi->num_strikes);
+				b->first_frame = 1;
+				b->strikes_left--;
+				nebl_jitter(b);
+
+				// by continuing here we skip rendering for one frame, which makes it look more like real lightning
+				continue;
+			}
+			// otherwise he's completely done, so release him
+			else {
+				// maybe free up node data
+				if(!Nebl_bolts.check(b->head)){
+					nebl_release(b->head);
+
+					Num_lbolts--;
+
+					nprintf(("lightning", "Released bolt."));// %d used nodes!\n" ));
+				}
+				Nebl_bolts.remove(i.position());
+			}
+		}
+
+		// pick some cool alpha values
+		Nebl_alpha = frand();
+		Nebl_glow_alpha = frand();
+
+		// otherwise render him
+		Nebl_flash_count = 0;
+		Nebl_flash_x = 0.0f;
+		Nebl_flash_y = 0.0f;
+		Nebl_bang = 10000000.0f;
+		nebl_render(bi, &Nebl_nodes[b->head], b->width);
+
+		// if this is the first frame he has been rendered, determine if we need to make a flash and sound effect
+		if(b->first_frame){
+			float flash = 0.0f;				
+
+			b->first_frame = 0;
+
+			// if we rendered any points
+			if(Nebl_flash_count){
+				Nebl_flash_x /= (float)Nebl_flash_count;
+				Nebl_flash_y /= (float)Nebl_flash_count;
+
+				// quick distance from the center of the screen			
+				float x = Nebl_flash_x - (gr_screen.max_w / 2.0f);
+				float y = Nebl_flash_y - (gr_screen.max_h / 2.0f);
+				float dist = fl_sqrt((x * x) + (y * y));		
+				if(dist / (gr_screen.max_w / 2.0f) < 1.0f){
+					flash = 1.0f - (dist / (gr_screen.max_w / 2.0f));										
+
+					// scale the flash by bolt type
+					flash *= bi->b_bright;
+
+					game_flash(flash, flash, flash);										
+				}					
+
+				// do some special stuff on the very first strike of the bolt
+				if(b->strikes_left == bi->num_strikes){					
+					// play a sound
+					float bang;
+					if(Nebl_bang < 40.0f){
+						bang = 1.0f;
+					} else if(Nebl_bang > 400.0f){
+						bang = 0.0f;
+					} else {
+						bang = 1.0f - (Nebl_bang / 400.0f);
+					}
+					if(frand_range(0.0f, 1.0f) < 0.5f){
+						snd_play(gamesnd_get_game_sound(GameSounds::LIGHTNING_2), 0.0f, bang, SND_PRIORITY_DOUBLE_INSTANCE);
+					} else {
+						snd_play(gamesnd_get_game_sound(GameSounds::LIGHTNING_1), 0.0f, bang, SND_PRIORITY_DOUBLE_INSTANCE);
+					}
+
+					// apply em pulse
+					if(bi->emp_intensity > 0.0f){
+						emp_apply(&b->midpoint, 0.0f, vm_vec_dist(&b->start, &b->strike), bi->emp_intensity, bi->emp_time);
+					}
+				}
+			}				
+		}
+	
 	}	
 }
 
@@ -714,28 +689,17 @@ void nebl_process()
 void nebl_bolt(int type, vec3d *start, vec3d *strike)
 {
 	vec3d dir;
-	l_bolt *bolt;
-	l_node *tail;
-	int idx;
-	bool found;		
+	gIndex tail;
 	bolt_type *bi;
 	float bolt_len;
 
 	if(!(The_mission.flags[Mission::Mission_Flags::Fullneb])){
 		return;
 	}
-
+	auto optidx = Nebl_bolts.getNew();
 	// find a free bolt
-	found = 0;
-	for(idx=0; idx<MAX_LIGHTNING_BOLTS; idx++){
-		if(!Nebl_bolts[idx].used){
-			found = 1;
-			break;
-		}
-	}
-	if(!found){
-		return;
-	}
+	if(optidx == tl::nullopt) return;
+	auto bolt_index = optidx.value();
 
 	if( type >= (int)Bolt_types.size() ){
 		return;
@@ -743,7 +707,7 @@ void nebl_bolt(int type, vec3d *start, vec3d *strike)
 	bi = &Bolt_types[type];	
 
 	// get a pointer to the bolt
-	bolt = &Nebl_bolts[idx];	
+	auto * bolt = &Nebl_bolts[bolt_index];
 
 	// setup bolt into
 	bolt->start = *start;
@@ -780,17 +744,14 @@ void nebl_bolt(int type, vec3d *start, vec3d *strike)
 
 	// try and make the bolt
 	if(!nebl_gen(&Nebl_bolt_start, &Nebl_bolt_strike, 0, 4, 0, &bolt->head, &tail)){
-		if(bolt->head != NULL){
-			nebl_release(bolt->head);
+		if(Nebl_bolts.check(bolt->head)){
+			Nebl_bolts.remove(bolt->head);
 		}
 
 		return;
 	}
-
-	Num_lbolts++;	
 	
-	// setup the rest of the data	
-	bolt->used = 1;	
+	// setup the rest of the data	 
 	bolt->width = bi->b_poly_pct * bolt_len;
 
 	// if i'm a multiplayer master, send a bolt packet
@@ -799,107 +760,39 @@ void nebl_bolt(int type, vec3d *start, vec3d *strike)
 	}
 }
 
-// "new" a lightning node
-l_node *nebl_new()
+
+int nebl_gen(vec3d *left, vec3d *right, float depth, float max_depth, int child, gIndex *l_left, gIndex *l_right)
 {
-	l_node *lp;
-
-	// if we're out of nodes
-	if(Num_lnodes >= MAX_LIGHTNING_NODES){
-		nprintf(("lightning", "Out of lightning nodes!\n"));
-		return NULL;
-	}
-
-	// get a new node off the freelist
-	lp = GET_FIRST(&Nebl_free_list);
-	Assert( lp != &Nebl_free_list );		// shouldn't have the dummy element
-
-	// remove trailp from the free list
-	list_remove( &Nebl_free_list, lp );
-	
-	// insert trailp onto the end of used list
-	list_append( &Nebl_used_list, lp );
-
-	// increment counter
-	Num_lnodes++;
-
-	lp->links[0] = NULL;
-	lp->links[1] = NULL;
-	lp->links[2] = NULL;	
-
-	// return the pointer
-	return lp;
-}
-
-// "delete" a lightning node
-void nebl_delete(l_node *lp)
-{
-	// remove objp from the used list
-	list_remove( &Nebl_used_list, lp );
-
-	// add objp to the end of the free
-	list_append( &Nebl_free_list, lp );
-
-	// decrement counter
-	Num_lnodes--;
-}
-
-// free a lightning bolt
-void nebl_release(l_node *whee)
-{
-	// if we're invalid
-	if(whee == NULL){
-		return;
-	}
-
-	// release all of our children
-	if(whee->links[LINK_RIGHT] != NULL){
-		nebl_release(whee->links[LINK_RIGHT]);
-	}	
-	if(whee->links[LINK_CHILD] != NULL){
-		nebl_release(whee->links[LINK_CHILD]);
-	}	
-
-	// delete this node
-	nebl_delete(whee);
-}
-
-int nebl_gen(vec3d *left, vec3d *right, float depth, float max_depth, int child, l_node **l_left, l_node **l_right)
-{
-	l_node *child_node = NULL;
 	float d = vm_vec_dist_quick( left, right );		
 
 	// if we've reached the critical point
 	if ( d < 0.30f || (depth > max_depth) ){
 		// generate ne items
-		l_node *new_left = nebl_new();
-		if(new_left == NULL){
+		auto left_ind = Nebl_nodes.getNew();
+		auto right_ind = Nebl_nodes.getNew();
+		if (!(right_ind.has_value() && left_ind.has_value()))
 			return 0;
-		}		
-		new_left->links[0] = NULL; new_left->links[1] = NULL; new_left->links[2] = NULL;
+
+		auto *new_left = &Nebl_nodes[left_ind.value()];
+		auto *new_right = &Nebl_nodes[right_ind.value()]; 
+
 		new_left->pos = vmd_zero_vector;
-		l_node *new_right = nebl_new();
-		if(new_right == NULL){
-			nebl_delete(new_left);			
-			return 0;
-		}		
-		new_right->links[0] = NULL; new_right->links[1] = NULL; new_right->links[2] = NULL;
-		new_right->pos = vmd_zero_vector;
 
 		// left side
 		new_left->pos = *left;		
-		new_left->links[LINK_RIGHT] = new_right;		
-		*l_left = new_left;
+		new_left->links[LINK_RIGHT] = right_ind.value();		
+		*l_left = left_ind.value();
 		
 		// right side
 		new_right->pos = *right;
-		new_right->links[LINK_LEFT] = new_left;
-		*l_right = new_right;
+		new_right->links[LINK_LEFT] = left_ind.value();
+		*l_right = right_ind.value();
 
 		// done
 		return 1;
 	}  
 
+	gIndex child_node;
 	// divide in half
 	vec3d tmp;
 	vm_vec_avg( &tmp, left, right );
@@ -916,11 +809,8 @@ int nebl_gen(vec3d *left, vec3d *right, float depth, float max_depth, int child,
 		vm_vec_scale_add(&tmp2, &tmp, &dir, Nebl_type->b_shrink);
 
 		// child
-		l_node *argh;		
-		if(!nebl_gen(&tmp, &tmp2, 0, 2, 1, &child_node, &argh)){
-			if(child_node != NULL){
-				nebl_release(child_node);
-			}
+		gIndex argh_index;
+		if(!nebl_gen(&tmp, &tmp2, 0, 2, 1, &child_node, &argh_index)){
 			return 0;
 		}
 	}
@@ -931,47 +821,32 @@ int nebl_gen(vec3d *left, vec3d *right, float depth, float max_depth, int child,
 	tmp.xyz.z += (frand()-0.5f)*d*scaler;
 
 	// generate left half
-	l_node *ll = NULL;
-	l_node *lr = NULL;
+	gIndex ll;
+	gIndex lr;
 	if(!nebl_gen( left, &tmp, depth+1, max_depth, child, &ll, &lr )){
-		if(child_node != NULL){
-			nebl_release(child_node);
-		}
-		if(ll != NULL){
-			nebl_release(ll);
-		}
 		return 0;
 	}
 
 	// generate right half
-	l_node *rl = NULL;
-	l_node *rr = NULL;
+	gIndex rl;
+	gIndex rr;
 	if(!nebl_gen( &tmp, right, depth+1, max_depth, child, &rl, &rr )){
-		if(child_node != NULL){
-			nebl_release(child_node);
-		}
-		if(ll != NULL){
-			nebl_release(ll);
-		}
-		if(rl != NULL){
-			nebl_release(rl);
-		}
 		return 0;
 	}
-	
+
 	// splice the two together
-	lr->links[LINK_RIGHT] = rl->links[LINK_RIGHT];
-	lr->links[LINK_RIGHT]->links[LINK_LEFT] = lr;
-	nebl_delete(rl);
+	Nebl_nodes[lr].links[LINK_RIGHT] = Nebl_nodes[rl].links[LINK_RIGHT];
+	Nebl_nodes[Nebl_nodes[lr].links[LINK_RIGHT]].links[LINK_LEFT] = lr;
+	Nebl_bolts.remove(rl);
 
 	// if we generated a child, stick him on
-	if(child_node != NULL){
-		lr->links[LINK_CHILD] = child_node;
+	if(Nebl_nodes.check(child_node) != NULL){
+		Nebl_nodes[lr].links[LINK_CHILD] = child_node;
 	}
 
 	// return these
-	*l_left = ll;
-	*l_right = rr;
+	l_left = &ll;
+	l_right = &rr;
 
 	return 1;
 }
@@ -1149,54 +1024,59 @@ void nebl_render(bolt_type *bi, l_node *whee, float width, l_section *prev)
 	l_section start;
 	l_section end;
 	l_section child_start;
-
+	const gIndex null_index= gIndex(); 
 	// bad
 	if(whee == NULL){
 		return;
 	}
-
+	l_node* rightptr = nullptr; 
 	// if prev is NULL, we're just starting so we need our start point
 	if(prev == NULL){
-		Assert(whee->links[LINK_RIGHT] != NULL);
-		nebl_generate_section(bi, width, whee, whee->links[LINK_RIGHT], &start, NULL, 1, 0);
+		Assert(Nebl_nodes.check(whee->links[LINK_RIGHT]));
+		rightptr = &(Nebl_nodes[whee->links[LINK_RIGHT]]);
+		nebl_generate_section(bi, width, whee, rightptr, &start, nullptr, 1, 0);
 	} else {
 		start = *prev;
 	}
-	
+	l_node* childptr = nullptr;
 	// if we have a child section	
-	if(whee->links[LINK_CHILD]){		
+	if(!whee->links[LINK_CHILD].null()){
 		// generate section
-		nebl_generate_section(bi, width * 0.5f, whee, whee->links[LINK_CHILD], &child_start, &end, 0, whee->links[LINK_CHILD]->links[LINK_RIGHT] == NULL ? 1 : 0);
+		childptr = &(Nebl_nodes[whee->links[LINK_CHILD]]);
+		
+		nebl_generate_section(bi, width * 0.5f, whee, childptr, &child_start, &end, 0, childptr->links[LINK_RIGHT].null() ? 1 : 0);
 
 		// render
 		nebl_render_section(bi, &child_start, &end);			
 
 		// maybe continue
-		if(whee->links[LINK_CHILD]->links[LINK_RIGHT] != NULL){
-			nebl_render(bi, whee->links[LINK_CHILD], width * 0.5f, &end);
+		if(!childptr->links[LINK_RIGHT].null()){
+			nebl_render(bi, childptr, width * 0.5f, &end);
 		}
 	}	
-		
+
+	rightptr = &(Nebl_nodes[whee->links[LINK_RIGHT]]);
 	// if the next section is an end section
-	if(whee->links[LINK_RIGHT]->links[LINK_RIGHT] == NULL){
+	if(rightptr->links[LINK_RIGHT].null()){
 		l_section temp;
 
 		// generate section
-		nebl_generate_section(bi, width, whee, whee->links[LINK_RIGHT], &temp, &end, 0, 1);
+		nebl_generate_section(bi, width, whee, rightptr, &temp, &end, 0, 1);
 
 		// render the section
 		nebl_render_section(bi, &start, &end);		
 	}
 	// a middle section
-	else if(whee->links[LINK_RIGHT]->links[LINK_RIGHT] != NULL){
+	else if(!rightptr->links[LINK_RIGHT].null()){
+		l_node * rrptr = &(Nebl_nodes[rightptr->links[LINK_RIGHT]]);
 		// generate section
-		nebl_generate_section(bi, width, whee->links[LINK_RIGHT], whee->links[LINK_RIGHT]->links[LINK_RIGHT], &end, NULL, 0, 0);
+		nebl_generate_section(bi, width, rightptr, rrptr, &end, nullptr, 0, 0);
 
 		// render the section
 		nebl_render_section(bi, &start, &end);
 
 		// recurse through him
-		nebl_render(bi, whee->links[LINK_RIGHT], width, &end);
+		nebl_render(bi, rightptr, width, &end);
 	}
 }
 
@@ -1217,20 +1097,20 @@ void nebl_jitter(l_bolt *b)
 		return;		
 	}
 	bi = &Bolt_types[b->type];
-
+	
 	// get the bolt direction
 	vm_vec_sub(&temp, &b->strike, &b->start);
 	length = vm_vec_normalize_quick(&temp);
 	vm_vector_2_matrix(&m, &temp, NULL, NULL);
 
 	// jitter all nodes on the main trunk
-	moveup = b->head;
-	while(moveup != NULL){
+	moveup = &Nebl_nodes[b->head];
+	while(moveup != nullptr){
 		temp = moveup->pos;
 		vm_vec_random_in_circle(&moveup->pos, &temp, &m, frand_range(0.0f, length * bi->noise), false);
 
 		// just on the main trunk
-		moveup = moveup->links[LINK_RIGHT];
+		moveup = &Nebl_nodes[moveup->links[LINK_RIGHT]];
 	}	
 }
 
