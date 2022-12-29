@@ -5,16 +5,48 @@
 using namespace std;
 using  tl::optional;
 struct gIndex{
-	size_t index;
-	size_t generation;
+	private:
+	int index;
+	int generation;
+	bool is_null = true;
+	public:
+	gIndex(){ nullify();};
+	gIndex(int i,int g,bool b = false){
+		if(b){ 
+		}
+		index = i;
+		generation = g;
+	};
+	void set(int i,int g){
+		is_null = false;
+		index = i;
+		generation = g;
+	}
+	void nullify()
+	{
+		index = -1;
+		generation = -1;
+		is_null=true;
+	};
+	bool operator==(gIndex &rhs) const {
+		if(is_null && rhs.is_null)
+			return true;
+		if(is_null || rhs.is_null)
+			return false;
+		return (index == rhs.index && generation == rhs.generation);
+	};
+	gIndex& operator=(gIndex const&rhs) = default;
+	int i() const { return index;};
+	int g() const { return generation;};
+	bool null() const { return is_null;};
 };
-
 
 template  <typename T>
 
 struct gEntry {
 	size_t generation;
 	optional<T> stored;
+
 };
 
 template  <typename T>
@@ -38,9 +70,7 @@ class gVector {
 		n.generation = 0;
 		//Assuming trivial constructor behavior here...
 		storage.push_back(n);
-		gIndex i;
-		i.index = storage.size()-1;
-		i.generation = 0;
+		gIndex i(storage.size()-1,0);
 		return i;
 	};
 
@@ -52,9 +82,7 @@ class gVector {
 		//and resest to nullopt here so we need to construct a new object to go in there.
 		storage[i].value = T();
 		storage[i].generation++;
-		gIndex r;
-		r.index = i;
-		r.generation = storage[i].generation;
+		gIndex r(i,storage[i].generation);
 		known_empty.pop_back();
 		return r;
 	}
@@ -109,60 +137,55 @@ class gVector {
 		fill_empty_list();
 	}
 
-	//Index into the storage...
-	T& operator[](gIndex i) {
+/*
+	//Index into the storage... with optionals
+	optional<T&> operator[](gIndex i) {
 		T* v = nullptr;
 		if (i.index >= storage.size()) {
-			return *v;
+			return tl::nullopt;
 		}
 		if (storage[i.index].generation!= i.generation){
-			return *v;
+			return tl::nullopt;
 		}
 		if(storage[i.index].stored==tl::nullopt) 
+			return tl::nullopt;
+		v = &storage[i.index].stored.value();
+		return optional<T&>(*v);//(storage[i.index].stored);
+	};
+*///*
+	//Index into the storage... bare reference
+	T& operator[](gIndex i) {
+		T* v = nullptr;
+		if (i.i() >= storage.size()) {
 			return *v;
-		v = (storage[i.index].stored).operator->();
+		}
+		if (storage[i.i()].generation!= i.g()){
+			return *v;
+		}
+		if(storage[i.i()].stored==tl::nullopt) 
+			return *v;
+		v = (storage[i.i()].stored).operator->();
 		return *v;
 	};
-
+//*/
 	optional<T*> get_pointer(gIndex i){
-		if (i.index >= storage.size()) {
+		if (i.i() >= storage.size()) {
 			return tl::nullopt;
 		}
-		if (storage[i.index].generation!= i.generation){
+		if (storage[i.i()].generation!= i.g()){
 			return tl::nullopt;
 		}
-		optional<T> s = storage[i.index].value;
+		optional<T> s = storage[i.i()].value;
 		T* p = s.operator->();
 		return p;
 	};
 
-	//gets a gRef object
-	//this sidesteps much of the boilerplate stuff, a ref can just be asked for a pointer
-	optional<gRef<T>> getNewRef(){
-		T n = T();
-		auto i = add(n);
-		gRef<T> r = gRef<T>(this,i);
-		return r;
-
-	};
 
 	
-gIndex getNew(){
-	T n = T();
-	auto i = add(n);
-	return i;
-};
-
-	optional<gRef<T>> getRef(gIndex i){
-		if (i.index >= storage.size()) {
-			return tl::nullopt;
-		}
-		if (storage[i.index].generation!= i.generation){
-			return tl::nullopt;
-		}
-		gRef<T> r = gRef<T>(i,this);
-
-		return r;
+	optional<gIndex> getNew(){
+		T n = T();
+		auto i = add(n);
+		return i;
 	};
 
 	//Store a value in the vector
@@ -175,32 +198,32 @@ gIndex getNew(){
 		n.generation = 0;
 		n.stored = input;
 		storage.push_back(n);
-		gIndex i;
-		i.index = storage.size()-1;
-		i.generation=0;
+		gIndex i(storage.size()-1,0);;
 		return i;
 		}
 	else {
 		auto i = known_empty.back();
 		storage[i].stored = input;
 		storage[i].generation++;
-		gIndex r;
-		r.index = i;
-		r.generation = storage[i].generation;
+		gIndex r(i,storage[i].generation);
 		known_empty.pop_back();
 		return r;
 		}
 	};
 
+	void remove(optional<gIndex> i){
+		if (i.has_value())
+			remove(i.value());
+	};
 	void remove(gIndex i){
-		if (i.index >= storage.size()) {
+		if (i.i() >= storage.size()) {
 			return;
 		}
-		if (storage[i.index].generation != i.generation ) {
+		if (storage[i.i()].generation != i.g() ) {
 			return;
 		}
-		storage[i.index].stored.reset();
-		known_empty.push_back(i.index);
+		storage[i.i()].stored.reset();
+		known_empty.push_back(i.i());
 	};
 	bool check(gIndex i){
 		return (this[i]!=tl::nullopt);
@@ -237,12 +260,12 @@ gIndex getNew(){
 			while(storage->at(inner_position).value == tl::nullopt 
 				  && inner_position < storage->size()){
 				inner_position++;
-			}
-			full_position.index=inner_position;
+			} 
 			if(inner_position < storage->size()
 			   && storage->at(inner_position).value != tl::nullopt){
-				full_position.generation = storage->at(inner_position).generation;
+				full_position.set(inner_position,storage->at(inner_position).generation);
 			}
+			else{full_position.nullify();}
 			return *this;
 		};
 		iter& operator++(int i){
@@ -251,9 +274,10 @@ gIndex getNew(){
 		T* operator*(){
 			vec->get_pointer(full_position);
 		};
-		gRef<T> operator&(){
-			vec->getRef(inner_position);
+		T& operator&(){
+			return vec[inner_position];
 		};
+		gIndex position(){return full_position;}
 	private:
 		index inner_position;
 		gIndex full_position;
