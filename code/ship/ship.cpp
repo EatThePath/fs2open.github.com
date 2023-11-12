@@ -6170,7 +6170,7 @@ static int ship_allocate_subsystems(int num_so, bool page_in = false)
 
 		// append the new set to our free list
 		for (i = 0; i < NUM_SHIP_SUBSYSTEMS_PER_SET; i++)
-			list_append( &ship_subsys_free_list, &new_batch[i] );
+			list_insert(&ship_subsys_free_list, &new_batch[i]);
 
 		Num_ship_subsystems_allocated += NUM_SHIP_SUBSYSTEMS_PER_SET;
 	} while ( (Num_ship_subsystems - Num_ship_subsystems_allocated) > 0 );
@@ -8188,7 +8188,7 @@ static void ship_subsystems_delete(ship *shipp)
 		while ( systemp != END_OF_LIST(&shipp->subsys_list) ) {
 			temp = GET_NEXT( systemp );								// use temporary since pointers will get screwed with next operation
 			list_remove( shipp->subsys_list, systemp );			// remove the element
-			list_append( &ship_subsys_free_list, systemp );		// and place back onto free list
+			list_insert(&ship_subsys_free_list, systemp);           // and place back onto free list
 			Num_ship_subsystems--;								// subtract from our in-use total
 			systemp = temp;												// use the temp variable to move right along
 		}

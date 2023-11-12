@@ -847,7 +847,7 @@ void nebl_delete(l_node *lp)
 	list_remove( &Nebl_used_list, lp );
 
 	// add objp to the end of the free
-	list_append( &Nebl_free_list, lp );
+	list_insert(&Nebl_free_list, lp);
 
 	// decrement counter
 	Num_lnodes--;

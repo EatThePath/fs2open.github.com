@@ -715,7 +715,7 @@ void obj_merge_created_list(void)
 		obj_add_collider(OBJ_INDEX(objp));
 
 		// Then add it to the object used list
-		list_append( &obj_used_list, objp );
+		list_insert(&obj_used_list, objp);
 
 		objp = GET_FIRST(&obj_create_list);
 	}
