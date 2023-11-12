@@ -377,7 +377,7 @@ void obj_render_queue_all()
 
 	gr_reset_lighting();
 
-	batching_render_all();
+	//batching_render_all();
 
 	gr_zbias(0);
 	gr_zbuffer_set(ZBUFFER_TYPE_READ);
