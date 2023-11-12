@@ -427,7 +427,7 @@ int beam_fire(beam_fire_info *fire_info)
 	list_remove( &Beam_free_list, new_item );
 	
 	// insert onto the end of used list
-	list_append( &Beam_used_list, new_item );
+	list_insert(&Beam_used_list, new_item);
 
 	// increment counter
 	Beam_count++;	
@@ -613,7 +613,7 @@ int beam_fire_targeting(fighter_beam_fire_info *fire_info)
 	list_remove( &Beam_free_list, new_item );
 	
 	// insert onto the end of used list
-	list_append( &Beam_used_list, new_item );
+	list_insert(&Beam_used_list, new_item);
 
 	// increment counter
 	Beam_count++;
@@ -2068,7 +2068,7 @@ void beam_delete(beam *b)
 
 	// remove from active list and put on free list
 	list_remove(&Beam_used_list, b);
-	list_append(&Beam_free_list, b);
+	list_insert(&Beam_free_list, b);
 
 	// delete our associated object
 	if(b->objnum >= 0){
