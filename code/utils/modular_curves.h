@@ -327,7 +327,7 @@ struct modular_curves_definition {
 			}
 
 			curve_entry.wraparound = true;
-			parse_optional_bool_into("+Wraparound:", &curve_entry.wraparound);
+			parse_bool_into("+Wraparound:", &curve_entry.wraparound, PARSE_REQ_OPTIONAL);
 
 			curves[static_cast<std::underlying_type_t<output_enum>>(output_idx)].emplace_back(input_idx, curve_entry);
 		}

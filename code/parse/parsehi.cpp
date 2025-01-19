@@ -1,7 +1,9 @@
 #include "parsehi.h"
 #include "globalincs/vmallocator.h"
+#include "globalincs/utility.h"
 #include "parselo.h"
 #include "graphics/color.h"
+
 
 /**
  * @brief Parses an optional table value into a field if the name is found
@@ -11,8 +13,9 @@
  *
  * @return True if a value was parsed, false if not
  */
-bool parse_optional_float_into(const SCP_string& field_name, float* value_target)
+bool parse_float_into(const SCP_string& field_name, float* value_target, Parse_Require need_level)
 {
+	//if(need_level==PARSE_REQ_REQUIRED)
 	if (optional_string(field_name.c_str())) {
 		stuff_float(value_target);
 		return true;
@@ -28,7 +31,7 @@ bool parse_optional_float_into(const SCP_string& field_name, float* value_target
  *
  * @return True if a value was parsed, false if not
  */
-bool parse_optional_bool_into(const SCP_string& field_name, bool* value_target)
+bool parse_bool_into(const SCP_string& field_name, bool* value_target, Parse_Require need_level)
 {
 	if (optional_string(field_name.c_str())) {
 		stuff_boolean(value_target);
@@ -45,7 +48,7 @@ bool parse_optional_bool_into(const SCP_string& field_name, bool* value_target)
  *
  * @return True if a value was parsed, false if not
  */
-bool parse_optional_color3i_into(const SCP_string& field_name, hdr_color* out_color)
+bool parse_color3i_into(const SCP_string& field_name, hdr_color* out_color, Parse_Require need_level)
 {
 	if (optional_string(field_name.c_str())) {
 		int components[3] = {255, 255, 255};

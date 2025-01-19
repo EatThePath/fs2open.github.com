@@ -1269,7 +1269,7 @@ int parse_weapon(int subtype, bool replace, const char *filename)
 			stuff_vec3d(&wip->laser_pos_offset);
 	}
 
-  parse_optional_float_into("@Laser Min Pixel Size:", &wip->laser_min_pixel_size);
+  	parse_float_into("@Laser Min Pixel Size:", &wip->laser_min_pixel_size, PARSE_REQ_OPTIONAL);
 
 	if (optional_string("@Laser Opacity over Lifetime Curve:")) {
 		SCP_string curve_name;
@@ -1277,14 +1277,14 @@ int parse_weapon(int subtype, bool replace, const char *filename)
 		wip->weapon_curves.add_curve("Lifetime", weapon_info::WeaponCurveOutputs::LASER_ALPHA_MULT, modular_curves_entry{curve_get_by_name(curve_name)});
 	}
 
-	if (parse_optional_color3i_into("$Light color:", &wip->light_color)) {
+	if (parse_color3i_into("$Light color:", &wip->light_color, PARSE_REQ_OPTIONAL)) {
 		wip->light_color_set = true;
 	}
 
-	parse_optional_float_into("$Light radius:", &wip->light_radius);
+	parse_float_into("$Light radius:", &wip->light_radius, PARSE_REQ_OPTIONAL);
 
 	float fbuffer;
-	if (parse_optional_float_into("$Light intensity:", &fbuffer))
+	if (parse_float_into("$Light intensity:", &fbuffer, PARSE_REQ_OPTIONAL))
 		wip->light_color.i(fbuffer);
 
 	if (optional_string("$Collision Radius Override:")) {
@@ -2420,11 +2420,11 @@ int parse_weapon(int subtype, bool replace, const char *filename)
 				invalid_armor = true;
 			}
 		};
-		parse_optional_float_into("+Min Health Threshold:", &ci.min_health_threshold);
-		parse_optional_float_into("+Max Health Threshold:", &ci.max_health_threshold);
-		parse_optional_float_into("+Min Angle Threshold:", &ci.min_angle_threshold);
-		parse_optional_float_into("+Max Angle Threshold:", &ci.max_angle_threshold);
-		parse_optional_bool_into("+Dinky:", &ci.dinky);
+		parse_float_into("+Min Health Threshold:", &ci.min_health_threshold, PARSE_REQ_OPTIONAL);
+		parse_float_into("+Max Health Threshold:", &ci.max_health_threshold, PARSE_REQ_OPTIONAL);
+		parse_float_into("+Min Angle Threshold:", &ci.min_angle_threshold, PARSE_REQ_OPTIONAL);
+		parse_float_into("+Max Angle Threshold:", &ci.max_angle_threshold, PARSE_REQ_OPTIONAL);
+		parse_bool_into("+Dinky:", &ci.dinky, PARSE_REQ_OPTIONAL);
 		required_string("+Effect Name:");
 			ci.effect = particle::util::parseEffect(wip->name);
 		SCP_vector<ConditionalImpact> ci_vec;
@@ -2999,9 +2999,9 @@ int parse_weapon(int subtype, bool replace, const char *filename)
 		if ( optional_string("+BeamWidth:") )
 			stuff_float(&wip->b_info.beam_width);
 
-		parse_optional_bool_into("+Beam Light Flickers:", &wip->b_info.beam_light_flicker);
+		parse_bool_into("+Beam Light Flickers:", &wip->b_info.beam_light_flicker, PARSE_REQ_OPTIONAL);
 
-		parse_optional_bool_into("+Beam Width Multiplies Light Radius:", &wip->b_info.beam_light_as_multiplier);
+		parse_bool_into("+Beam Width Multiplies Light Radius:", &wip->b_info.beam_light_as_multiplier, PARSE_REQ_OPTIONAL);
 
 		if (optional_string("+Beam Flash Particle Effect:")) {
 			wip->flash_impact_weapon_expl_effect = particle::util::parseEffect(wip->name);

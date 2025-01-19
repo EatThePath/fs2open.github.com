@@ -110,26 +110,26 @@ bool adjustment::parse(const char* filename,
 		int parses = 0;
 		while (parsed) {
 			parsed = false;
-			if (parse_optional_float_into("+default:", &value_target->base)) {
+			if (parse_float_into("+default:", &value_target->base, PARSE_REQ_OPTIONAL)) {
 				parsed = true;
 				parses++;
 			}
-			if (parse_optional_float_into("+maximum:", &value_target->maximum)) {
+			if (parse_float_into("+maximum:", &value_target->maximum, PARSE_REQ_OPTIONAL)) {
 				value_target->has_maximum = true;
 				parsed = true;
 				parses++;
 			}
-			if (parse_optional_float_into("+minimum:", &value_target->minimum)) {
+			if (parse_float_into("+minimum:", &value_target->minimum, PARSE_REQ_OPTIONAL)) {
 				value_target->has_minimum = true;
 				parsed = true;
 				parses++;
 			}
-			if (parse_optional_float_into("+multiplier:", &value_target->multipier)) {
+			if (parse_float_into("+multiplier:", &value_target->multipier, PARSE_REQ_OPTIONAL)) {
 				value_target->has_multiplier = true;
 				parsed = true;
 				parses++;
 			}
-			if (parse_optional_float_into("+adjust:", &value_target->adjust)) {
+			if (parse_float_into("+adjust:", &value_target->adjust, PARSE_REQ_OPTIONAL)) {
 				value_target->has_adjust = true;
 				parsed = true;
 				parses++;

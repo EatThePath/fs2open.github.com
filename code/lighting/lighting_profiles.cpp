@@ -341,12 +341,12 @@ void profile::parse(const char* filename, const SCP_string& profile_name, const 
 			tonemapper = tn;
 			parsed = true;
 		}
-		parsed |= parse_optional_float_into("$PPC Toe Strength:", &ppc_values.toe_strength);
-		parsed |= parse_optional_float_into("$PPC Toe Length:", &ppc_values.toe_length);
-		parsed |= parse_optional_float_into("$PPC Shoulder Length:", &ppc_values.shoulder_length);
-		parsed |= parse_optional_float_into("$PPC Shoulder Strength:", &ppc_values.shoulder_strength);
-		parsed |= parse_optional_float_into("$PPC Shoulder Angle:", &ppc_values.shoulder_angle);
-		parsed |= parse_optional_float_into("$Exposure:", &exposure);
+		parsed |= parse_float_into("$PPC Toe Strength:", &ppc_values.toe_strength, PARSE_REQ_OPTIONAL);
+		parsed |= parse_float_into("$PPC Toe Length:", &ppc_values.toe_length, PARSE_REQ_OPTIONAL);
+		parsed |= parse_float_into("$PPC Shoulder Length:", &ppc_values.shoulder_length, PARSE_REQ_OPTIONAL);
+		parsed |= parse_float_into("$PPC Shoulder Strength:", &ppc_values.shoulder_strength, PARSE_REQ_OPTIONAL);
+		parsed |= parse_float_into("$PPC Shoulder Angle:", &ppc_values.shoulder_angle, PARSE_REQ_OPTIONAL);
+		parsed |= parse_float_into("$Exposure:", &exposure, PARSE_REQ_OPTIONAL);
 
 		parsed |= adjustment::parse(filename, "$Missile light brightness:", profile_name, &missile_light_brightness);
 		parsed |= adjustment::parse(filename, "$Missile light radius:", profile_name, &missile_light_radius);
@@ -378,7 +378,7 @@ void profile::parse(const char* filename, const SCP_string& profile_name, const 
 			overall_brightness.stack_multiplier(Cmdline_light_power);
 		}
 
-		parsed |= parse_optional_float_into("$Exposure:", &exposure);
+		parsed |= parse_float_into("$Exposure:", &exposure, PARSE_REQ_OPTIONAL);
 
 		parsed |= adjustment::parse(filename,
 			"$Cockpit light radius modifier:",
